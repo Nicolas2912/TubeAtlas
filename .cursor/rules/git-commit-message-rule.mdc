@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Formulate git commit message short and precise and avoid long commit messages.
