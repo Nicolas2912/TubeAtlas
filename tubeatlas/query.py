@@ -55,5 +55,3 @@ if __name__ == "__main__":
         print(df)
     else:
         print("Query returned no results or an error occurred.")
-
-
