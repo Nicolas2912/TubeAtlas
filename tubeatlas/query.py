@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import os
 
 # --- Adjust Pandas Display Options ---
 # Set the display width to a large number (or None to try and auto-detect)
@@ -39,7 +40,10 @@ def query_transcript_db(db_path, query):
             conn.close()
 
 if __name__ == "__main__":
-    db_path = "youtube_transcripts.db"
+    # Default database path in the data directory
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, "AndrejKarpathy.db")
     # query first 10 rows
     query = "SELECT * FROM transcripts LIMIT 10"
 

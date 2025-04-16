@@ -92,6 +92,7 @@ class YouTubeTranscriptManager:
                     description TEXT,
                     tags TEXT,
                     category_name TEXT,
+                    kg_graph TEXT,
                     transcript_text TEXT,
                     download_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -357,6 +358,10 @@ def count_tokens_in_directory(api_key, directory_path):
 #    ...
 
 
+def get_channel_name_from_url(url: str):
+    channel_name = url.split("@")[-1]
+    return channel_name
+
 if __name__ == "__main__":
     # Load environment variables (for API key)
     load_dotenv()
@@ -375,7 +380,11 @@ if __name__ == "__main__":
 
     # Choose storage type: 'file' or 'sqlite'
     storage = 'sqlite' # Options: 'file', 'sqlite'
-    db_file = 'youtube_transcripts.db' # Used only if storage = 'sqlite'
+    # Organize database files under the data directory
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)
+    # Use a per-channel SQLite DB in data/
+    db_file = os.path.join(data_dir, f"{get_channel_name_from_url(channel_url)}.db")
     region_code_for_categories = 'US' # Define region for category names
 
     transcript_manager = None
