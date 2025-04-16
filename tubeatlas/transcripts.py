@@ -9,15 +9,33 @@ import datetime # For handling dates
 import json # For potentially storing tags as JSON if preferred
 
 # Third-party imports
-from google import genai
-import scrapetube
-# import spacy # No longer needed if only getting transcripts/metadata
+try:
+    from google import genai
+except ImportError:
+    genai = None
+try:
+    import scrapetube
+except ImportError:
+    scrapetube = None
 from tqdm import tqdm
-from youtube_transcript_api import YouTubeTranscriptApi
-from dotenv import load_dotenv # For API Key
-from googleapiclient.discovery import build # For YouTube Data API
-from googleapiclient.errors import HttpError # For API errors
-import isodate # <-- Import the isodate library
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except ImportError:
+    YouTubeTranscriptApi = None
+try:
+    from dotenv import load_dotenv # For API Key
+except ImportError:
+    load_dotenv = lambda: None
+try:
+    from googleapiclient.discovery import build # For YouTube Data API
+    from googleapiclient.errors import HttpError # For API errors
+except ImportError:
+    build = None
+    HttpError = Exception
+try:
+    import isodate  # For ISO 8601 duration parsing
+except ImportError:
+    isodate = None
 
 
 class YouTubeTranscriptManager:
@@ -132,14 +150,20 @@ class YouTubeTranscriptManager:
         """Parses ISO 8601 duration string to total seconds."""
         if not duration_str:
             return 0
+        # If isodate library is unavailable, apply simple regex fallback
+        if isodate is None:
+            import re
+            m = re.match(r'^PT(?:(?P<h>\d+)H)?(?:(?P<m>\d+)M)?(?:(?P<s>\d+)S)?$', duration_str)
+            if not m:
+                return 0
+            hours = int(m.group('h') or 0)
+            minutes = int(m.group('m') or 0)
+            seconds = int(m.group('s') or 0)
+            return hours * 3600 + minutes * 60 + seconds
         try:
             duration = isodate.parse_duration(duration_str)
             return int(duration.total_seconds())
-        except isodate.ISO8601Error:
-            print(f"Warning: Could not parse duration '{duration_str}'")
-            return 0
-        except Exception as e:
-            print(f"Warning: Unexpected error parsing duration '{duration_str}': {e}")
+        except Exception:
             return 0
 
     def _fetch_metadata_batch(self, video_ids_batch):
