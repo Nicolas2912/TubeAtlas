@@ -165,7 +165,7 @@ class KnowledgeGraphBuilder:
         is_within_limit = token_count <= self.config.max_tokens
         return is_within_limit, token_count
 
-    def load_text_from_db(self, query: str = "SELECT transcript_text FROM transcripts LIMIT 1") -> str:
+    def load_text_from_db(self, query: str = "SELECT title, transcript_text FROM transcripts WHERE openai_tokens > 2000 LIMIT 1") -> str:
         """
         Load text content from the SQLite database.
         
@@ -173,7 +173,7 @@ class KnowledgeGraphBuilder:
             query: SQL query to execute for fetching the text.
             
         Returns:
-            str: The fetched text content.
+            str: The fetched transcript text content.
             
         Raises:
             sqlite3.Error: If there's an error accessing the database.
@@ -190,8 +190,10 @@ class KnowledgeGraphBuilder:
                     logger.warning("No text found in database with query: %s", query)
                     return ""
                     
-                text = result[0]
-                is_within_limit, token_count = self.check_token_limit(text)
+                title, transcript_text = result
+                print(f"Processing transcript: {title}")
+                
+                is_within_limit, token_count = self.check_token_limit(transcript_text)
                 
                 if not is_within_limit:
                     logger.error("Text exceeds token limit: %d tokens (limit: %d)", 
@@ -199,7 +201,7 @@ class KnowledgeGraphBuilder:
                     raise ValueError(f"Text exceeds token limit of {self.config.max_tokens} tokens")
                 
                 logger.info("Successfully loaded text from database (%d tokens)", token_count)
-                return text
+                return transcript_text
                 
         except sqlite3.Error as e:
             logger.error("Database error: %s", e)
@@ -310,20 +312,184 @@ class KnowledgeGraphBuilder:
             logger.error("Error saving knowledge graph: %s", e)
             raise
 
+    def _calc_api_costs(self):
+        # 1. get all number of tokens for one channel
+        conn = sqlite3.connect(self.config.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT SUM(openai_tokens) FROM transcripts")
+        result = cursor.fetchone()
+        total_tokens = result[0]
+
+        # 2. get the cost of the tokens
+        pricing_dict_per_million_tokens = {
+            "gpt-4.1": {
+                "input": 2.00,
+                "cached_input": 0.50,
+                "output": 8.00
+            },
+            "gpt-4.1-mini": {
+                "input": 0.40,
+                "cached_input": 0.10,
+                "output": 1.60
+            },
+            "gpt-4.1-nano": {
+                "input": 0.100,
+                "cached_input": 0.025,
+                "output": 0.400
+            }
+        }
+
+        # 3. calculate the cost
+        input_token_costs = round(pricing_dict_per_million_tokens[self.config.model_name]["input"] * total_tokens / 1000000, 3)
+        
+        logger.info("Total tokens: %d", total_tokens)
+        logger.info(f"Input token costs for model {self.config.model_name}: {input_token_costs}")
+        return total_tokens, input_token_costs
+
+    def build_complete_knowledge_graph(self, batch_size: int = 5) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Build a knowledge graph from all transcripts in the database.
+        
+        This method loads all transcript texts from the database, processes them in batches
+        to avoid token limits, and combines the results into a single knowledge graph.
+        
+        Args:
+            batch_size: Number of transcripts to process in each batch to manage token limits.
+            
+        Returns:
+            Dict containing the combined knowledge graph triples from all transcripts.
+            
+        Raises:
+            sqlite3.Error: If there's an error accessing the database.
+            ValueError: If no transcripts are found or processing fails.
+        """
+        try:
+            logger.info("Building complete knowledge graph from all transcripts")
+            
+            # Load all transcripts from database
+            with sqlite3.connect(self.config.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT title, transcript_text FROM transcripts WHERE transcript_text IS NOT NULL AND transcript_text != ''")
+                all_transcripts = cursor.fetchall()
+                
+                if not all_transcripts:
+                    logger.warning("No transcripts found in database")
+                    raise ValueError("No transcripts found in database")
+                
+                logger.info("Found %d transcripts to process", len(all_transcripts))
+            
+            # Combine all triples from batches
+            all_triples = []
+            processed_count = 0
+            
+            # Process transcripts in batches to manage token limits
+            for i in range(0, len(all_transcripts), batch_size):
+                batch = all_transcripts[i:i + batch_size]
+                logger.info("Processing batch %d/%d (transcripts %d-%d)", 
+                           (i // batch_size) + 1, 
+                           (len(all_transcripts) + batch_size - 1) // batch_size,
+                           i + 1, 
+                           min(i + batch_size, len(all_transcripts)))
+                
+                # Combine texts from current batch
+                batch_text = ""
+                batch_titles = []
+                
+                for title, transcript_text in batch:
+                    batch_titles.append(title)
+                    # Add title as context and transcript text
+                    batch_text += f"{transcript_text}\n ---\n"
+                
+                # Check token limit for batch
+                is_within_limit, token_count = self.check_token_limit(batch_text)
+                
+                if not is_within_limit:
+                    logger.warning("Batch exceeds token limit (%d tokens), reducing batch size", token_count)
+                    # Process transcripts individually if batch is too large
+                    for title, transcript_text in batch:
+                        individual_text = f"=== {title} ===\n{transcript_text}"
+                        is_individual_within_limit, individual_token_count = self.check_token_limit(individual_text)
+                        
+                        if is_individual_within_limit:
+                            logger.info("Processing individual transcript: %s (%d tokens)", title, individual_token_count)
+                            try:
+                                graph_data = self.extract_knowledge_graph(individual_text)
+                                all_triples.extend(graph_data["triples"])
+                                processed_count += 1
+                            except Exception as e:
+                                logger.error("Error processing transcript '%s': %s", title, e)
+                        else:
+                            logger.warning("Skipping transcript '%s' - exceeds token limit (%d tokens)", 
+                                         title, individual_token_count)
+                else:
+                    # Process entire batch
+                    logger.info("Processing batch with %d transcripts (%d tokens)", len(batch), token_count)
+                    try:
+                        graph_data = self.extract_knowledge_graph(batch_text)
+                        all_triples.extend(graph_data["triples"])
+                        processed_count += len(batch)
+                    except Exception as e:
+                        logger.error("Error processing batch: %s", e)
+                        # Fallback to individual processing
+                        for title, transcript_text in batch:
+                            individual_text = f"=== {title} ===\n{transcript_text}"
+                            try:
+                                graph_data = self.extract_knowledge_graph(individual_text)
+                                all_triples.extend(graph_data["triples"])
+                                processed_count += 1
+                            except Exception as e:
+                                logger.error("Error processing transcript '%s': %s", title, e)
+            
+            logger.info("Successfully processed %d/%d transcripts", processed_count, len(all_transcripts))
+            logger.info("Extracted %d total triples", len(all_triples))
+            
+            # Remove duplicate triples while preserving order
+            unique_triples = []
+            seen_triples = set()
+            
+            for triple in all_triples:
+                triple_key = (triple["subject"], triple["predicate"], triple["object"])
+                if triple_key not in seen_triples:
+                    seen_triples.add(triple_key)
+                    unique_triples.append(triple)
+            
+            logger.info("After deduplication: %d unique triples", len(unique_triples))
+            
+            return {"triples": unique_triples}
+            
+        except sqlite3.Error as e:
+            logger.error("Database error: %s", e)
+            raise
+        except Exception as e:
+            logger.error("Error building complete knowledge graph: %s", e)
+            raise
+
 def main():
     """Example usage of the KnowledgeGraphBuilder class."""
     try:
+        # make config
+        config = GraphBuilderConfig(
+            model_name="gpt-4.1-mini",
+            temperature=0.0,
+            strict_mode=True,
+            db_path="data/bryanjohnson.db",
+            output_path="data/complete_kg_langchain_bryanjohnson.json"
+        )
         # Create builder with default config
-        builder = KnowledgeGraphBuilder()
+        builder = KnowledgeGraphBuilder(config)
         
-        # Load text from database
-        text = builder.load_text_from_db()
+        # Option 1: Load single text from database
+        # text = builder.load_text_from_db()
+        # graph_data = builder.extract_knowledge_graph(text)
         
-        # Extract knowledge graph
-        graph_data = builder.extract_knowledge_graph(text)
+        # Option 2: Build complete knowledge graph from all transcripts
+        graph_data = builder.build_complete_knowledge_graph(batch_size=3)
         
         # Save the results
         builder.save_knowledge_graph(graph_data)
+        
+        # Calculate API costs
+        builder._calc_api_costs()
         
     except Exception as e:
         logger.error("Error in main execution: %s", e)
