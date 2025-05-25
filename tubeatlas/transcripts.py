@@ -484,7 +484,7 @@ class YouTubeTranscriptManager:
         if openai:
             try:
                 import tiktoken
-                encoding = tiktoken.encoding_for_model("gpt-4")
+                encoding = tiktoken.encoding_for_model("gpt-4o")
                 openai_tokens = len(encoding.encode(content))
             except Exception as e:
                 logger.warning(f"Error counting tokens with OpenAI: {e}")
@@ -670,7 +670,7 @@ def get_channel_name_from_url(url: str) -> str:
         url: YouTube channel URL
         
     Returns:
-        Channel name or ID
+        Channel name or ID (without @ symbol for @username format)
         
     Raises:
         ValueError: If URL is invalid or not a YouTube channel URL
@@ -688,7 +688,8 @@ def get_channel_name_from_url(url: str) -> str:
             channel_name = url.split('/@')[-1].split('/')[0]
             if not channel_name:
                 raise ValueError("Invalid channel name in URL")
-            return channel_name
+            # Remove @ symbol if present at the start of the channel name
+            return channel_name.lstrip('@')
             
         # Handle /c/ format
         elif '/c/' in url:
