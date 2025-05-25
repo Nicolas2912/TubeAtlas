@@ -9,6 +9,7 @@ OpenAI's language models and storing the results in a structured format.
 import os
 import json
 import logging
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Union, Tuple
@@ -346,9 +347,9 @@ class KnowledgeGraphBuilder:
         logger.info(f"Input token costs for model {self.config.model_name}: {input_token_costs}")
         return total_tokens, input_token_costs
 
-    def build_complete_knowledge_graph(self, batch_size: int = 5) -> Dict[str, List[Dict[str, str]]]:
+    def build_complete_knowledge_graph(self, batch_size: int = 3) -> Dict[str, List[Dict[str, str]]]:
         """
-        Build a knowledge graph from all transcripts in the database.
+        Build a knowledge graph from all transcripts in the database (synchronous version).
         
         This method loads all transcript texts from the database, processes them in batches
         to avoid token limits, and combines the results into a single knowledge graph.
@@ -378,18 +379,25 @@ class KnowledgeGraphBuilder:
                 
                 logger.info("Found %d transcripts to process", len(all_transcripts))
             
+            # Calculate total number of batches
+            total_batches = (len(all_transcripts) + batch_size - 1) // batch_size
+            logger.info("Will process in %d batches of size %d", total_batches, batch_size)
+            
             # Combine all triples from batches
             all_triples = []
             processed_count = 0
             
             # Process transcripts in batches to manage token limits
-            for i in range(0, len(all_transcripts), batch_size):
-                batch = all_transcripts[i:i + batch_size]
+            for batch_num in range(total_batches):
+                start_idx = batch_num * batch_size
+                end_idx = min(start_idx + batch_size, len(all_transcripts))
+                batch = all_transcripts[start_idx:end_idx]
+                
                 logger.info("Processing batch %d/%d (transcripts %d-%d)", 
-                           (i // batch_size) + 1, 
-                           (len(all_transcripts) + batch_size - 1) // batch_size,
-                           i + 1, 
-                           min(i + batch_size, len(all_transcripts)))
+                           batch_num + 1, 
+                           total_batches,
+                           start_idx + 1, 
+                           end_idx)
                 
                 # Combine texts from current batch
                 batch_text = ""
@@ -464,6 +472,222 @@ class KnowledgeGraphBuilder:
             logger.error("Error building complete knowledge graph: %s", e)
             raise
 
+    async def build_complete_knowledge_graph_async(self, batch_size: int = 3, max_concurrent: int = 5) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Build a knowledge graph from all transcripts in the database (asynchronous version).
+        
+        This method loads all transcript texts from the database, processes them concurrently
+        using async operations to speed up the knowledge graph building process.
+        
+        Args:
+            batch_size: Number of transcripts to process in each batch to manage token limits.
+            max_concurrent: Maximum number of concurrent batch processing operations.
+            
+        Returns:
+            Dict containing the combined knowledge graph triples from all transcripts.
+            
+        Raises:
+            sqlite3.Error: If there's an error accessing the database.
+            ValueError: If no transcripts are found or processing fails.
+        """
+        try:
+            logger.info("Building complete knowledge graph from all transcripts (async)")
+            
+            # Load all transcripts from database
+            with sqlite3.connect(self.config.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT title, transcript_text FROM transcripts WHERE transcript_text IS NOT NULL AND transcript_text != ''")
+                all_transcripts = cursor.fetchall()
+                
+                if not all_transcripts:
+                    logger.warning("No transcripts found in database")
+                    raise ValueError("No transcripts found in database")
+                
+                logger.info("Found %d transcripts to process", len(all_transcripts))
+            
+            # Calculate total number of batches
+            total_batches = (len(all_transcripts) + batch_size - 1) // batch_size
+            logger.info("Will process in %d batches of size %d with max %d concurrent operations", 
+                       total_batches, batch_size, max_concurrent)
+            
+            # Create batches
+            batches = []
+            for batch_num in range(total_batches):
+                start_idx = batch_num * batch_size
+                end_idx = min(start_idx + batch_size, len(all_transcripts))
+                batch = all_transcripts[start_idx:end_idx]
+                batches.append((batch_num + 1, batch))
+            
+            # Process batches concurrently with semaphore to limit concurrent operations
+            semaphore = asyncio.Semaphore(max_concurrent)
+            all_triples = []
+            
+            async def process_batch(batch_info):
+                batch_num, batch = batch_info
+                async with semaphore:
+                    return await self._process_batch_async(batch_num, batch, total_batches)
+            
+            # Execute all batch processing concurrently
+            logger.info("Starting concurrent batch processing...")
+            batch_results = await asyncio.gather(*[process_batch(batch_info) for batch_info in batches], 
+                                                return_exceptions=True)
+            
+            # Collect results and handle exceptions
+            processed_count = 0
+            for i, result in enumerate(batch_results):
+                if isinstance(result, Exception):
+                    logger.error("Error processing batch %d: %s", i + 1, result)
+                else:
+                    triples, count = result
+                    all_triples.extend(triples)
+                    processed_count += count
+            
+            logger.info("Successfully processed %d transcripts", processed_count)
+            logger.info("Extracted %d total triples", len(all_triples))
+            
+            # Remove duplicate triples while preserving order
+            unique_triples = []
+            seen_triples = set()
+            
+            for triple in all_triples:
+                triple_key = (triple["subject"], triple["predicate"], triple["object"])
+                if triple_key not in seen_triples:
+                    seen_triples.add(triple_key)
+                    unique_triples.append(triple)
+            
+            logger.info("After deduplication: %d unique triples", len(unique_triples))
+            
+            return {"triples": unique_triples}
+            
+        except sqlite3.Error as e:
+            logger.error("Database error: %s", e)
+            raise
+        except Exception as e:
+            logger.error("Error building complete knowledge graph (async): %s", e)
+            raise
+
+    async def _process_batch_async(self, batch_num: int, batch: List[Tuple[str, str]], total_batches: int) -> Tuple[List[Dict[str, str]], int]:
+        """
+        Process a single batch of transcripts asynchronously.
+        
+        Args:
+            batch_num: The batch number for logging.
+            batch: List of (title, transcript_text) tuples.
+            total_batches: Total number of batches for logging.
+            
+        Returns:
+            Tuple of (triples_list, processed_count).
+        """
+        try:
+            start_idx = (batch_num - 1) * len(batch) + 1
+            end_idx = start_idx + len(batch) - 1
+            
+            logger.info("Processing batch %d/%d (transcripts %d-%d)", 
+                       batch_num, total_batches, start_idx, end_idx)
+            
+            # Combine texts from current batch
+            batch_text = ""
+            for title, transcript_text in batch:
+                batch_text += f"{transcript_text}\n ---\n"
+            
+            # Check token limit for batch
+            is_within_limit, token_count = self.check_token_limit(batch_text)
+            
+            if not is_within_limit:
+                logger.warning("Batch %d exceeds token limit (%d tokens), processing individually", 
+                             batch_num, token_count)
+                # Process transcripts individually if batch is too large
+                all_triples = []
+                processed_count = 0
+                
+                for title, transcript_text in batch:
+                    individual_text = f"=== {title} ===\n{transcript_text}"
+                    is_individual_within_limit, individual_token_count = self.check_token_limit(individual_text)
+                    
+                    if is_individual_within_limit:
+                        logger.info("Processing individual transcript: %s (%d tokens)", title, individual_token_count)
+                        try:
+                            doc = Document(page_content=individual_text)
+                            graph_documents = await self.transformer.aconvert_to_graph_documents([doc])
+                            
+                            if graph_documents:
+                                graph_doc = graph_documents[0]
+                                for rel in graph_doc.relationships:
+                                    predicate_formatted = rel.type.lower().replace("_", " ")
+                                    all_triples.append({
+                                        "subject": rel.source.id,
+                                        "predicate": predicate_formatted,
+                                        "object": rel.target.id
+                                    })
+                                processed_count += 1
+                        except Exception as e:
+                            logger.error("Error processing transcript '%s': %s", title, e)
+                    else:
+                        logger.warning("Skipping transcript '%s' - exceeds token limit (%d tokens)", 
+                                     title, individual_token_count)
+                
+                return all_triples, processed_count
+            else:
+                # Process entire batch
+                logger.info("Processing batch %d with %d transcripts (%d tokens)", 
+                           batch_num, len(batch), token_count)
+                try:
+                    doc = Document(page_content=batch_text)
+                    graph_documents = await self.transformer.aconvert_to_graph_documents([doc])
+                    
+                    if not graph_documents:
+                        logger.error("No graph documents generated from batch %d", batch_num)
+                        return [], 0
+                    
+                    graph_doc = graph_documents[0]
+                    output_triples = []
+                    
+                    for rel in graph_doc.relationships:
+                        predicate_formatted = rel.type.lower().replace("_", " ")
+                        output_triples.append({
+                            "subject": rel.source.id,
+                            "predicate": predicate_formatted,
+                            "object": rel.target.id
+                        })
+                    
+                    return output_triples, len(batch)
+                    
+                except Exception as e:
+                    logger.error("Error processing batch %d: %s", batch_num, e)
+                    return [], 0
+                    
+        except Exception as e:
+            logger.error("Error in batch processing %d: %s", batch_num, e)
+            return [], 0
+
+async def main_async():
+    """Example usage of the KnowledgeGraphBuilder class with async processing."""
+    try:
+        # make config
+        config = GraphBuilderConfig(
+            model_name="gpt-4.1-mini",
+            temperature=0.0,
+            strict_mode=True,
+            db_path="data/bryanjohnson.db",
+            output_path="data/complete_kg_langchain_bryanjohnson_async.json"
+        )
+        # Create builder with default config
+        builder = KnowledgeGraphBuilder(config)
+        
+        # Build complete knowledge graph from all transcripts (async version)
+        # Process with batch_size=25 and max 3 concurrent operations
+        graph_data = await builder.build_complete_knowledge_graph_async(batch_size=25, max_concurrent=3)
+        
+        # Save the results
+        builder.save_knowledge_graph(graph_data)
+        
+        # Calculate API costs
+        builder._calc_api_costs()
+        
+    except Exception as e:
+        logger.error("Error in async main execution: %s", e)
+        raise
+
 def main():
     """Example usage of the KnowledgeGraphBuilder class."""
     try:
@@ -482,8 +706,11 @@ def main():
         # text = builder.load_text_from_db()
         # graph_data = builder.extract_knowledge_graph(text)
         
-        # Option 2: Build complete knowledge graph from all transcripts
-        graph_data = builder.build_complete_knowledge_graph(batch_size=3)
+        # Option 2: Build complete knowledge graph from all transcripts (sync version)
+        graph_data = builder.build_complete_knowledge_graph(batch_size=25)
+        
+        # Option 3: Use async version for faster processing
+        # graph_data = asyncio.run(builder.build_complete_knowledge_graph_async(batch_size=25, max_concurrent=3))
         
         # Save the results
         builder.save_knowledge_graph(graph_data)
