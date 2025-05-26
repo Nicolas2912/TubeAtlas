@@ -741,6 +741,8 @@ def setup_argparse() -> argparse.ArgumentParser:
     
     parser.add_argument(
         "channel_url",
+        nargs='?',  # Add this to make the argument optional
+        default="https://www.youtube.com/@lexfridman",
         help="YouTube channel URL (e.g., https://www.youtube.com/@channelname, "
              "https://www.youtube.com/c/channelname, or https://www.youtube.com/channel/UC...)"
     )
