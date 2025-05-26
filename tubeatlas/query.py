@@ -88,6 +88,12 @@ QUERIES = {
         FROM transcripts
         ORDER BY publish_date DESC
         LIMIT 10
+    """,
+
+    'openai_tokens': """
+        SELECT 
+            SUM(openai_tokens) as total_openai_tokens
+        FROM transcripts
     """
 }
 
@@ -232,15 +238,16 @@ def run_queries(channel_name: str) -> None:
         
         # Run each query
         for query_name, query in QUERIES.items():
-            logger.info(f"\nQuery: {query_name}")
-            logger.info("-" * 40)
-            
-            df = query_transcript_db(db_path, query)
-            if df.empty:
-                logger.info("No results found")
-            else:
-                print(f"\nResults ({len(df)} rows):")
-                print(df)
+            if query_name == 'openai_tokens':
+                logger.info(f"\nQuery: {query_name}")
+                logger.info("-" * 40)
+                
+                df = query_transcript_db(db_path, query)
+                if df.empty:
+                    logger.info("No results found")
+                else:
+                    print(f"\nResults ({len(df)} rows):")
+                    print(df)
                 
     except Exception as e:
         logger.error(f"Error running queries: {e}")
