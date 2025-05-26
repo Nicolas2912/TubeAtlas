@@ -707,10 +707,10 @@ def main():
         # graph_data = builder.extract_knowledge_graph(text)
         
         # Option 2: Build complete knowledge graph from all transcripts (sync version)
-        graph_data = builder.build_complete_knowledge_graph(batch_size=25)
+        # graph_data = builder.build_complete_knowledge_graph(batch_size=25)
         
         # Option 3: Use async version for faster processing
-        # graph_data = asyncio.run(builder.build_complete_knowledge_graph_async(batch_size=25, max_concurrent=3))
+        graph_data = asyncio.run(builder.build_complete_knowledge_graph_async(batch_size=10, max_concurrent=3))
         
         # Save the results
         builder.save_knowledge_graph(graph_data)

@@ -14,8 +14,6 @@ import networkx as nx
 import time
 from tqdm import tqdm
 
-
-
 load_dotenv()
 
 class KnowledgeGraphBuilderGoogle:
@@ -99,9 +97,14 @@ class KnowledgeGraphBuilderGoogle:
         db_name = os.path.join("data", f"{self.yt_channel}.db")
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
-        cursor.execute("SELECT transcript_text FROM transcripts")
-        transcripts = cursor.fetchall()
+        cursor.execute("SELECT title, transcript_text FROM transcripts")
+        results = cursor.fetchall()
         conn.close()
+        
+        # Print titles and return only transcript texts
+        for title, _ in results:
+            print(f"Processing transcript: {title}")
+        transcripts = [(text,) for _, text in results]
         if not transcripts:
             print(f"Warning: No transcripts found in {db_name}")
             return []
