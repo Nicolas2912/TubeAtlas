@@ -317,8 +317,8 @@ def main():
         visualizer = KnowledgeGraphVisualizer()
         
         # Load and visualize knowledge graph
-        kg_path = "data/example_kg_langchain_bryanjohnson.json"
-        output_file = "data/kg_visualization_langchain_bryanjohnson.html"
+        kg_path = "data/complete_kg_langchain_bryanjohnson.json"
+        output_file = "data/complete_kg_visualization_langchain_bryanjohnson.html"
         
         visualizer.load_knowledge_graph(kg_path)
         visualizer.visualize_with_pyvis(output_file)
