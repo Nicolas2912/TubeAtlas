@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
+import pyperclip
 
 # Configure logging
 logging.basicConfig(
@@ -94,6 +95,20 @@ QUERIES = {
         SELECT 
             SUM(openai_tokens) as total_openai_tokens
         FROM transcripts
+    """,
+    
+    'video_transcript': """
+        SELECT 
+            video_id,
+            title,
+            publish_date,
+            length_seconds,
+            category_name,
+            transcript_text,
+            gemini_tokens,
+            openai_tokens
+        FROM transcripts
+        WHERE video_id = '7xTGNNLPyMI'
     """
 }
 
@@ -217,6 +232,65 @@ def list_available_databases() -> Dict[str, bool]:
     
     return db_status
 
+def get_video_transcript(channel_name: str, video_id: str) -> None:
+    """
+    Get the transcript for a specific video ID.
+    
+    Args:
+        channel_name: Name of the channel (without .db extension)
+        video_id: YouTube video ID to get transcript for
+    """
+    db_path = get_db_path(channel_name)
+    
+    try:
+        # First check if database exists and is valid
+        is_valid, error_msg = check_database(db_path)
+        if not is_valid:
+            logger.error(error_msg)
+            return
+            
+        logger.info(f"\nGetting transcript for video ID: {video_id}")
+        logger.info("=" * 80)
+        
+        # Create the query for the specific video
+        query = f"""
+            SELECT 
+                title,
+                transcript_text,
+                openai_tokens
+            FROM transcripts
+            WHERE video_id = '{video_id}'
+        """
+        
+        df = query_transcript_db(db_path, query)
+        if df.empty:
+            logger.info(f"No video found with ID: {video_id}")
+        else:
+            video_info = df.iloc[0]
+            print(f"\nVideo Information:")
+            print(f"Title: {video_info['title']}")
+            print("\n" + "="*80)
+            print("TRANSCRIPT:")
+            print("="*80)
+            if video_info['transcript_text']:
+                transcript_text = video_info['transcript_text']
+                print(transcript_text)
+                
+                # Copy transcript to clipboard
+                try:
+                    pyperclip.copy(transcript_text)
+                    print("\n" + "="*80)
+                    print("✓ TRANSCRIPT COPIED TO CLIPBOARD (Zwischenablage)!")
+                    print("="*80)
+                except Exception as clipboard_error:
+                    print(f"\n⚠ Warning: Could not copy to clipboard: {clipboard_error}")
+            else:
+                print("No transcript available for this video.")
+            print(f"OpenAI Tokens: {video_info['openai_tokens']}")
+                
+    except Exception as e:
+        logger.error(f"Error getting transcript: {e}")
+
 def run_queries(channel_name: str) -> None:
     """
     Run all predefined queries for a channel.
@@ -238,7 +312,7 @@ def run_queries(channel_name: str) -> None:
         
         # Run each query
         for query_name, query in QUERIES.items():
-            if query_name == 'openai_tokens':
+            if query_name == 'all_videos':
                 logger.info(f"\nQuery: {query_name}")
                 logger.info("-" * 40)
                 
@@ -260,11 +334,18 @@ def main():
     if not db_status:
         logger.error("No valid databases found. Please run the download script first.")
         return
+    
+    # Check if AndrejKarpathy database exists and get the specific video transcript
+    if 'AndrejKarpathy' in db_status and db_status['AndrejKarpathy']:
+        logger.info("\nGetting transcript for AndrejKarpathy video 7xTGNNLPyMI...")
+        get_video_transcript('AndrejKarpathy', '7xTGNNLPyMI')
+    else:
+        logger.error("AndrejKarpathy database not found or invalid.")
         
     # Run queries for each valid database
-    for channel_name, is_valid in db_status.items():
-        if is_valid:
-            run_queries(channel_name)
+    # for channel_name, is_valid in db_status.items():
+    #     if is_valid:
+    #         run_queries(channel_name)
 
 if __name__ == "__main__":
     main()
