@@ -82,8 +82,10 @@ You are an expert content analyst. Below are partial insight summaries from diff
 # --- Helper Functions ---
 
 def _count_tokens_simple(text: str) -> int:
-    """Roughly estimates token count. 1 token ~ 4 chars for English."""
-    return len(text) // 4
+    """Roughly estimates token count ny using tiktoken"""
+    import tiktoken
+    encoding = tiktoken.get_encoding("gpt-4o-mini")
+    return len(encoding.encode(text))
 
 def _fetch_transcript_data(db_name: str) -> list:
     """Fetches transcript data (title, text, tokens) from the database."""
