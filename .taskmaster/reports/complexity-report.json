@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-06-26T19:51:10.821Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Setup Project Repository & Development Environment",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Decompose the repository/environment setup into ~6 subtasks that each produce a commit-ready deliverable (e.g., Git/Poetry bootstrap, dependency pinning, code-quality tooling, Dockerfile, docker-compose, GitHub Actions). For every subtask list goal, steps, dependencies, acceptance criteria, and rollback plan.",
+			"reasoning": "Requires coordinating Git, Poetry, Docker, CI, and code-quality tools; integration heavy but bounded scope and standard practices."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement Database Schema & ORM Models",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Split the database/ORM work into ~5 subtasks such as engine/session config, model definitions, index creation, repository layer, and test fixtures. Provide input/output specs and validation for each.",
+			"reasoning": "Schema is well-defined; main effort is mapping and concurrency testing—moderate complexity."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Develop YouTube Service & Transcript Management",
+			"complexityScore": 7,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Break the YouTube/transcript service into ~8 subtasks covering API client wrapper, pagination & back-off logic, transcript retrieval, persistence layer integration, Celery task shells, error/retry handling, raw data storage, and testing/mocking utilities.",
+			"reasoning": "Involves two external APIs, async processing, error handling, and DB integration; higher coupling and failure modes."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Implement Token Counting & Advanced Chunking Utilities",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Outline ~6 subtasks: tokenizer abstraction, token counting utility, basic chunking, semantic/speaker/timestamp chunkers, hierarchical chunker, and performance/benchmark tests.",
+			"reasoning": "Algorithmic work with performance constraints but limited external dependencies; mid-level complexity."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Build Knowledge Graph Generation Pipeline",
+			"complexityScore": 8,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Divide the KG pipeline into ~8 subtasks: transcript ingestion, chunk streaming, triple extraction chain, deduplication/merge logic, persistence formats, cost tracking, channel-level aggregation, and unit/integration tests.",
+			"reasoning": "Combines NLP chunking, LLM prompts, graph processing, cost accounting, and multi-level aggregation; substantial logic and resource handling."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Implement Asynchronous Background Processing Framework",
+			"complexityScore": 7,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Create ~7 subtasks: Celery app config, task wrappers for services, Redis integration, progress tracking DB hooks, retry/back-off policies, beat scheduling, and integration tests within docker-compose.",
+			"reasoning": "Needs reliable async execution, error resilience, and observability across containers; moderately high complexity."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Develop FastAPI REST API Layer",
+			"complexityScore": 7,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Plan ~8 subtasks: FastAPI app core, middleware/security setup, router for transcripts, router for KGs, task status endpoints, WebSocket implementation, rate limiting config, and OpenAPI customization & tests.",
+			"reasoning": "Multiple endpoints, real-time features, security, and external service coordination elevate complexity."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement Chat & RAG Query Service",
+			"complexityScore": 9,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Break the Chat/RAG service into ~10 subtasks: session management, embedding generation, vector store setup, retrieval strategies (semantic, keyword, graph, temporal), context assembler, budget enforcement, answer synthesis, API endpoints, load testing, and cost monitoring.",
+			"reasoning": "Combines conversational state, multiple retrieval algorithms, LLM calls, token budgeting, and performance SLAs—highly intricate."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Create Knowledge Graph Visualization Endpoints",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Design ~5 subtasks: KG serialization layer, HTML visualization generator, JSON/GraphML exporters, filtering & caching logic, and endpoint/unit tests.",
+			"reasoning": "Requires format conversions and performance tuning but relies on established libraries; moderate complexity."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Comprehensive Testing, Coverage & CI Enforcement",
+			"complexityScore": 8,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Partition into ~8 subtasks: unit test expansion, integration test suite, e2e docker-compose tests, coverage enforcement, load testing script, static analysis gate, CI matrix optimization, and artifact reporting.",
+			"reasoning": "High breadth across testing types, tooling integration, and CI optimization; significant but bounded effort."
+		}
+	]
+}
