@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "tubeatlas"
+version = "0.1.0"
+description = "Advanced YouTube Knowledge Graph & RAG Platform for transcript analysis and insight generation"
+authors = ["Nicolas Schneider <nicolas.schneider@fh-bielefeld.de>"]
+readme = "README.md"
+packages = [{include = "tubeatlas", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0"
+black = "^23.0"
+isort = "^5.0"
+flake8 = "^6.0"
+mypy = "^1.0"
+pre-commit = "^3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

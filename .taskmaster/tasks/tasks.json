@@ -1,0 +1,208 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository & Development Environment",
+        "description": "Create initial repo, project skeleton, tooling and CI/CD to satisfy NFR-4.* and Phase-1 goals.",
+        "details": "1. Initialize git repository and create Python 3.11 Poetry project.\n2. Scaffold folder tree exactly as in PRD 7.1.1.\n3. Add dependency pins to pyproject.toml: fastapi==0.104.*, uvicorn[standard], sqlalchemy==2.*, aiosqlite, youtube-transcript-api, google-api-python-client, langchain, openai, celery[redis], redis, python-dotenv, pytest, pytest-asyncio, black, flake8, mypy, isort, coverage.\n4. Add pre-commit hooks: black, flake8, mypy, isort, detect-secrets.\n5. Provide Dockerfile (multi-stage): builder → runtime; expose 8000; non-root user.\n6. Provide docker-compose.yml with api, redis, celery-worker services.\n7. Configure GitHub Actions workflow: lint → test → build → push image.\n8. Add .env.template with required variables (OPENAI_API_KEY etc.).",
+        "testStrategy": "• Run `poetry run pytest -q` ⇒ zero tests fail.\n• Execute `pre-commit run --all-files` ⇒ no linting issues.\n• `docker compose up` then GET /docs ⇒ returns 200.\n• GitHub Action completes on first push without red status.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Bootstrap Git Repository and Poetry Project",
+            "description": "Create the initial Git repository, configure Python 3.11 with Poetry, and commit baseline files.",
+            "dependencies": [],
+            "details": "• Run `git init` in the project root and add remote (GitHub).\n• Generate a `.gitignore` via `poetry new` (or GitHub template) covering Python, Poetry, Docker, VSCode, and secrets.\n• Execute `poetry init --name <project_name> --python 3.11 --no-interaction` to create `pyproject.toml`.\n• Configure default virtualenv path (`poetry config virtualenvs.in-project true`).\n• Commit initial state (`README.md`, license).\n<info added on 2025-06-26T19:39:43.538Z>\n• Activate the existing conda environment (confirm Python 3.11), then disable Poetry’s virtual-env creation:  \n  `poetry config virtualenvs.create false --local`  \n• Generate the project manifest inside repo root:  \n  `poetry init --name <project_name> --python \"^3.11\" --no-interaction`  \n• Lock dependencies: `poetry lock`  \n• Update `.gitignore` to include `.venv/` and `poetry-debug.log` (for collaborators who may enable local venvs).  \n• Reorganize legacy code per PRD: create `src/` and `tests/`; move existing modules into `src/<package_name>/` with `__init__.py`.  \n• Verify Poetry is using the conda env: `poetry run python -c \"import sys, pprint; pprint.pprint(sys.prefix)\"`.  \n• Stage and commit `pyproject.toml`, `poetry.lock`, updated `.gitignore`, and folder reorg with message “chore: bootstrap Poetry with conda env & reorganize structure”.\n</info added on 2025-06-26T19:39:43.538Z>\n<info added on 2025-06-26T19:41:28.191Z>\n• Upgrade the active “TubeAtlas” conda environment to Python 3.11 to satisfy the PRD:  \n  `conda install python=3.11 -y`  \n  Confirm with `python --version` (should report 3.11.x).\n\n• Install Poetry into the user path:  \n  `curl -sSL https://install.python-poetry.org | python -`  \n  Ensure `$HOME/.local/bin` (Linux/macOS) or `%APPDATA%\\Python\\Scripts` (Windows) is on `PATH`; verify via `poetry --version`.\n\n• Prevent Poetry from creating a separate virtual env and bind it to the upgraded conda env:  \n  `poetry config virtualenvs.create false --local`.\n\n• Initialize the project manifest:  \n  `poetry init --name <project_name> --python \"^3.11\" --no-interaction`  \n  `poetry lock`\n\n• Append `.python-version`, `.poetry/`, and `poetry-debug.log` to `.gitignore` (if absent) and commit the changes with message “chore: install Poetry, upgrade to Python 3.11, lock deps”.\n</info added on 2025-06-26T19:41:28.191Z>",
+            "status": "in-progress",
+            "testStrategy": "Verify `git status` is clean, `poetry run python -V` returns 3.11.x, and repository pushes to GitHub without errors."
+          },
+          {
+            "id": 2,
+            "title": "Scaffold Project Structure and Manage Dependencies",
+            "description": "Create folder tree per PRD 7.1.1, pin runtime & dev dependencies in `pyproject.toml`, and add an environment template.",
+            "dependencies": [
+              1
+            ],
+            "details": "• Exactly replicate required directories (e.g., `app/api`, `app/core`, `app/models`, `tests`, etc.).\n• Add listed pinned dependencies under `[tool.poetry.dependencies]` and `[tool.poetry.group.dev.dependencies]`.\n• Execute `poetry add` and `poetry add --group dev` to lock versions.\n• Generate `.env.template` containing placeholders for `OPENAI_API_KEY`, database URL, Redis settings, etc.\n• Add a minimal `main.py` FastAPI entrypoint referencing env vars via `python-dotenv`.\n• Commit changes with message “feat: scaffold structure & deps”.",
+            "status": "pending",
+            "testStrategy": "Run `poetry install` without conflicts; `python -m app.main` starts FastAPI on localhost; missing .env variables are read from template when copied."
+          },
+          {
+            "id": 3,
+            "title": "Configure Code Quality Tooling & Pre-commit Hooks",
+            "description": "Set up formatting, linting, type-checking and secret scanning with pre-commit.",
+            "dependencies": [
+              2
+            ],
+            "details": "• Add `.pre-commit-config.yaml` containing hooks for black, isort, flake8, mypy, detect-secrets.\n• Configure `pyproject.toml` sections for black and isort; add `.flake8` and `mypy.ini` with sensible defaults (strict optional).\n• Install and run `pre-commit install`.\n• Update CI ignore paths (`.gitignore`) for `.mypy_cache`, `.pytest_cache`, `.tox`.\n• Commit with message “chore: code-quality & pre-commit”.",
+            "status": "pending",
+            "testStrategy": "Run `pre-commit run --all-files`; ensure zero failures. Add a dummy secret to confirm detect-secrets blocks commit."
+          },
+          {
+            "id": 4,
+            "title": "Dockerize Application and Compose Services",
+            "description": "Provide multi-stage Dockerfile, non-root runtime image, and docker-compose with API, Redis, and Celery worker.",
+            "dependencies": [
+              3
+            ],
+            "details": "• Stage 1 (builder): use `python:3.11-slim`, copy project, run `poetry export --without-hashes` → pip install.\n• Stage 2 (runtime): copy from builder `/usr/local` and source; create user `appuser` (UID 1001), set `USER appuser`.\n• Expose 8000 and set `CMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]`.\n• `docker-compose.yml`: define `api` (build context), `redis` (official), `celery-worker` (same build context, command `celery -A app.worker worker -l info`). Link environment variables via `env_file: .env`.\n• Add volume for local dev reload if desired.\n• Commit with “feat: dockerization & compose”.",
+            "status": "pending",
+            "testStrategy": "Run `docker compose up --build`; hit `http://localhost:8000/docs`; ensure Celery worker connects to Redis."
+          },
+          {
+            "id": 5,
+            "title": "Implement CI/CD Pipeline with GitHub Actions",
+            "description": "Create workflow that lints, tests, builds, and pushes Docker images in alignment with NFR-4.* standards.",
+            "dependencies": [
+              4
+            ],
+            "details": "• `.github/workflows/ci.yml` with jobs:\n  1. `lint`: set up Python, cache Poetry, run `pre-commit run --all-files`.\n  2. `test`: run `pytest -q --cov=app` and upload coverage report artifact.\n  3. `build`: login to `ghcr.io` using `GITHUB_TOKEN`, build Docker image with tag `${{ github.sha }}` and `latest`, push.\n• Use matrix for OS/Python versions if needed.\n• Enable branch protection rules requiring workflow success.\n• Document required secrets (`GHCR_USERNAME`, `GHCR_TOKEN`) in repo settings.\n• Commit with “ci: add GitHub Actions pipeline”.",
+            "status": "pending",
+            "testStrategy": "Push to a feature branch; verify workflow runs all jobs successfully, Docker image appears in GitHub Container Registry, and tags are correct."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Database Schema & ORM Models",
+        "description": "Translate PRD SQL schema to SQLAlchemy models with concurrency-safe SQLite setup.",
+        "details": "1. Create config/database.py with SQLAlchemy async engine: `sqlite+aiosqlite:///tubeatlas.db` and session factory using async_sessionmaker(pool_size=20).\n2. Define Base = declarative_base().\n3. Implement models/video.py, transcript.py, knowledge_graph.py, processing_task.py reflecting all columns & indexes. Escape reserved words.\n4. Provide Alembic-less simple `create_all()` util for SQLite; but leave hooks for future migrations.\n5. Create composite indexes mirroring PRD (e.g. Index('ix_kg_channel', KnowledgeGraph.channel_id)).\n6. Implement repository layer with BaseRepository CRUD + dedicated repositories.\n7. Add connection healthcheck middleware for FastAPI.\nPseudo-code:\n```python\nclass Video(Base):\n    __tablename__ = \"videos\"\n    id = Column(String, primary_key=True)\n    channel_id = Column(String, nullable=False, index=True)\n    ...\n```\n",
+        "testStrategy": "• Spin up in-memory DB: `sqlite+aiosqlite:///:memory:`.\n• Pytest fixture creates tables, inserts sample rows, verifies FK constraints.\n• Concurrency test: 50 async tasks acquire session → commit without `OperationalError`.\n• Query performance test: insert 100k videos then measure `<500ms` for indexed lookup.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Develop YouTube Service & Transcript Management",
+        "description": "Fulfil FR-1.*, FR-2.*, FR-3.* for downloading transcripts, metadata and persisting to DB.",
+        "details": "1. youtube_service.py:\n   • Use google-api-python-client to fetch playlistItems in pages (50/page) with exponential back-off.\n   • Implement `fetch_channel_videos(channel_url, include_shorts, max_videos)` returning generator of metadata dicts.\n2. transcript_service.py:\n   • Use youtube-transcript-api (or fallback to Google CC) to download transcripts (`list_transcripts` then `fetch` per language).\n   • Map transcript availability status (available, none, disabled_by_creator).\n   • Compute token counts via utils/token_counter.py (to be created in Task-4).\n   • Insert/Update rows via VideoRepository & TranscriptRepository (upsert on video_id).\n   • Support incremental mode: stop when `video_id` already exists unless `update_existing`.\n3. Add Celery task shells `download_channel(channel_url)` and `download_video(video_url)` that enqueue work (full logic completed after Task-6).\n4. Implement robust error handling (custom exceptions) with retries (≥3) for API quota errors.\n5. Store raw JSON responses for debugging in `/data/raw/<video_id>.json`.\n",
+        "testStrategy": "• Mock Google & transcript APIs with `respx` returning deterministic data.\n• Unit tests check: 1) video row persisted, 2) transcript row persisted with correct token counts, 3) incremental update skips existing.\n• Integration test: process small public channel (≤3 videos) live (marked `@pytest.mark.external`).\n• Error test: supply video without transcript ⇒ status set to `unavailable`.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement Token Counting & Advanced Chunking Utilities",
+        "description": "Provide utilities supporting FR-4.*, FR-5.* including intelligent chunking for >1M tokens.",
+        "details": "1. utils/token_counter.py:\n   • Wrap tiktoken + google-palm tokenizers.\n   • `count_tokens(text, model)` returns int.\n   • Cache encoding instances.\n2. utils/chunking.py:\n   • Implement `semantic_chunk(text)` using sentence-transformers `all-mpnet-base-v2` to split on topic shifts.\n   • Provide `speaker_chunk`, `timestamp_chunk` helpers.\n   • `hierarchical_chunk(text)` returns nested list as per 6.3.2.\n   • Overlap parameter + max_tokens arg.\n3. Smart summarizer: `summarize_large(text, level)` calling OpenAI GPT-3.5 if >N tokens.\n4. Performance safeguards: stream processing using generators to avoid loading full transcript.\nPseudo-code:\n```python\ndef hierarchical_chunk(text:str, max_tokens:int=1000, overlap:int=100):\n    for segment in semantic_chunk(text):\n        if count_tokens(segment)>max_tokens:\n            yield from hierarchical_chunk(segment,max_tokens)\n        else:\n            yield segment\n```\n",
+        "testStrategy": "• Unit tests: feed 10k-token dummy text -> ensure ≤ (len(text)/max_tokens)+5 chunks.\n• Verify overlap correctness (first 10 tokens identical across boundaries).\n• Token counting parity: compare OpenAI API usage vs utility output (±1%).\n• Benchmarks: chunk 1M-token file in <30s on laptop.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Build Knowledge Graph Generation Pipeline",
+        "description": "Generate entity-relationship graphs from transcripts via LangChain + OpenAI, store results.",
+        "details": "1. kg_service.py:\n   • Function `generate_video_kg(video_id, model_cfg)`.\n   • Load transcript, chunk via utils/chunking, stream into LangChain `GraphPrompter` chain.\n   • Merge chunk-level triples, deduplicate.\n   • Persist as JSON + GraphML to `/data/kg/<video_id>.{json,graphml}`.\n2. Channel-level KG: aggregate all video KGs then run incremental merge (see PRD 6.4.3) storing `graph_type='channel'`.\n3. Cost tracking: use token counts to estimate $$ and persist in knowledge_graphs table.\n4. Expose internal function `update_knowledge_graphs_for_new_content(channel_id)`.\nPseudo-code:\n```python\ntriples = []\nfor chunk in hierarchical_chunk(transcript):\n    triples += llm.extract_triples(chunk)\nkg = nx.DiGraph()\nkg.add_weighted_edges_from(dedupe(triples))\n```\n",
+        "testStrategy": "• Mock OpenAI → deterministic triples.\n• Unit test: for sample transcript expect ≥N entities.\n• Regression test: run twice, verify identical KG (dedup works).\n• Performance test: 100 chunks processed asynchronously → completion < NFR-1.1 threshold.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Asynchronous Background Processing Framework",
+        "description": "Enable Celery + Redis workers for long-running transcript & KG tasks with progress tracking.",
+        "details": "1. Add celery_app.py with JSON serializer, exponential back-off, rate_limit (20/m default).\n2. Convert service functions into Celery tasks: `tasks.transcript.download_video`, `tasks.kg.generate_video` etc.\n3. Update processing_tasks table on task start/progress/finish via `task.update_state` callbacks.\n4. Configure Celery beat for periodic `update_channels` tasks (incremental sync FR-1.6).\n5. Provide graceful shutdown and automatic retry policy for API failures.\n6. Docker-compose: dedicate worker & beat containers.\n",
+        "testStrategy": "• Integration test: enqueue download & KG tasks, poll `/api/v1/tasks/{id}` (after Task-7) until `completed`.\n• Simulate failure → ensure automatic retry then status `failed` after max retries.\n• Stress test: 200 tasks queued, verify queue latency <5s average.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Develop FastAPI REST API Layer",
+        "description": "Expose REST endpoints (FR-7.*, FR-9.*, FR-10.*) with security, docs, rate limiting.",
+        "details": "1. Setup FastAPI app with lifespan event to init DB and Celery.\n2. CORS middleware (`allow_origins=*` placeholder) & HTTPS redirect.\n3. Implement routers:\n   • transcripts.py → POST channel/video (enqueue Celery), GET, DELETE.\n   • knowledge_graphs.py → POST generate, GET, visualize, DELETE.\n   • tasks.py → GET list/status, cancel.\n4. Use fastapi-limiter (Redis) for global rate limit (60/min IP).\n5. OpenAPI schema auto generated; add tags & examples per PRD 8.*.\n6. Structured error responses via utils/exceptions.py.\n7. Enable WebSocket `/ws/status/{task_id}` for real-time progress (FR-10.2).\n",
+        "testStrategy": "• FastAPI TestClient calls all endpoints, expect HTTP 2xx & correct JSON.\n• OpenAPI JSON at /openapi.json validated by swagger-spec-validator.\n• Rate limit test: 70 requests/min returns 429.\n• WebSocket test with `websockets` client receives progress updates.",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Chat & RAG Query Service",
+        "description": "Provide conversational interface over transcripts + KGs fulfilling FR-8.* and RAG pipeline.",
+        "details": "1. chat_service.py:\n   • Manage sessions in memory w/ TTL (Redis optional) and store history table later.\n2. ContextAssembler class (PRD 6.4.2) implemented using vector DB (sqlite-vss or FAISS in memory).\n3. Embedding generation via OpenAI `text-embedding-ada-002`; async batch to respect rate limits.\n4. Retrieval: semantic (FAISS), keyword (Whoosh/BM25), graph traversal (networkx), temporal filters.\n5. Response generation with LLM + system prompt including sources.\n6. Channel-wide queries: progressive retrieval → summarization fallback when tokens > max_context_tokens.\n7. Add `/api/v1/chat/*` endpoints calling chat_service.\n",
+        "testStrategy": "• Unit: given synthetic embeddings, query returns expected top-k chunk IDs.\n• End-to-end: ask factual question over small video, verify answer contains source timestamps.\n• Token budget test: inject long query; ensure assembled context tokens ≤ request limit.\n• Load test: 100 parallel chat sessions keep latency ≤2s avg (Success Metric).",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Create Knowledge Graph Visualization Endpoints",
+        "description": "Generate and serve interactive visualizations in HTML, JSON & GraphML (FR-9.*).",
+        "details": "1. Use pyvis (NetworkX → vis.js) for HTML, and return serialized GraphML/JSON.\n2. Endpoint `/api/v1/kg/visualize/{kg_id}?format=html|json|graphml`.\n3. Include filtering query params: min_degree, entity_types, timeframe.\n4. Embed styling & legend; front-end ready.\n5. Store generated artifacts in cache (disk) for reuse.\n",
+        "testStrategy": "• Unit: input small KG → visualize_json nodes == entities_count.\n• HTML response contains `<script src=\"https://unpkg.com/vis-network\"`.\n• GraphML passes lxml validation.\n• Performance: KG with 5k nodes renders <3s on test machine.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Comprehensive Testing, Coverage & CI Enforcement",
+        "description": "Achieve 90%+ coverage, performance, integration and e2e tests, wired into CI.",
+        "details": "1. Expand pytest suite: unit, integration (with sqlite tmp db), e2e (spin API + worker via docker-compose).\n2. Use pytest-cov; fail if coverage <90%.\n3. Add locust or k6 script for load tests (100 concurrent users) and include in CI (nightly job).\n4. Static analysis gate: mypy ‑-strict, flake8, black ‑-check.\n5. Generate HTML coverage report artifact.\n6. Update GitHub Action to cache dependencies, parallel test matrix (py3.11, py3.12-beta).\n",
+        "testStrategy": "• `pytest -n auto` passes with >90% coverage.\n• Load test yields average latency <2s and error rate <0.1%.\n• Static type check passes with zero `error:` lines.\n• Merge request blocked automatically on failure.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-26T19:11:26.826Z",
+      "updated": "2025-06-26T19:39:20.240Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
