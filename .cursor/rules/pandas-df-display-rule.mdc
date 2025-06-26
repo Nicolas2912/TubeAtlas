@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 When working with pandas always use these commands after importing pandas: pd.set_option('display.width', 1000)
 # Ensure all columns are displayed
