@@ -1,0 +1,264 @@
+{
+  "triples": [
+    {
+      "subject": "Biomarkers",
+      "predicate": "includes",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Sperm Health",
+      "predicate": "involves",
+      "object": "Sperm Quality Metrics"
+    },
+    {
+      "subject": "Sperm Quality Metrics",
+      "predicate": "includes",
+      "object": "Sperm Count"
+    },
+    {
+      "subject": "Sperm Quality Metrics",
+      "predicate": "includes",
+      "object": "Sperm Motility"
+    },
+    {
+      "subject": "Sperm Quality Metrics",
+      "predicate": "includes",
+      "object": "Sperm Morphology"
+    },
+    {
+      "subject": "Sperm Quality Metrics",
+      "predicate": "includes",
+      "object": "Dna Fragmentation"
+    },
+    {
+      "subject": "Dna Fragmentation",
+      "predicate": "related to",
+      "object": "Inflammation"
+    },
+    {
+      "subject": "Dna Fragmentation",
+      "predicate": "related to",
+      "object": "Reactive Oxygen Species"
+    },
+    {
+      "subject": "Sperm Motility",
+      "predicate": "related to",
+      "object": "Mitochondria Function"
+    },
+    {
+      "subject": "Sperm Count",
+      "predicate": "related to",
+      "object": "Cardiovascular Disease Risk"
+    },
+    {
+      "subject": "Sperm Count",
+      "predicate": "related to",
+      "object": "Hormones"
+    },
+    {
+      "subject": "Hormones",
+      "predicate": "includes",
+      "object": "Follicle Stimulating Hormone"
+    },
+    {
+      "subject": "Hormones",
+      "predicate": "includes",
+      "object": "Luteinizing Hormone"
+    },
+    {
+      "subject": "Hormones",
+      "predicate": "includes",
+      "object": "Testosterone"
+    },
+    {
+      "subject": "Biological Age",
+      "predicate": "includes",
+      "object": "Bone Mineral Density"
+    },
+    {
+      "subject": "Biological Age",
+      "predicate": "includes",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Toxins",
+      "predicate": "includes",
+      "object": "Phthalates"
+    },
+    {
+      "subject": "Toxins",
+      "predicate": "includes",
+      "object": "Bpa"
+    },
+    {
+      "subject": "Toxins",
+      "predicate": "includes",
+      "object": "Pos"
+    },
+    {
+      "subject": "Toxins",
+      "predicate": "causes",
+      "object": "Inflammation"
+    },
+    {
+      "subject": "Toxins",
+      "predicate": "causes",
+      "object": "Oxidative Stress"
+    },
+    {
+      "subject": "Obesity",
+      "predicate": "causes",
+      "object": "Inflammation"
+    },
+    {
+      "subject": "Insulin Resistance",
+      "predicate": "causes",
+      "object": "Inflammation"
+    },
+    {
+      "subject": "Inflammation",
+      "predicate": "reduces",
+      "object": "Sperm Production"
+    },
+    {
+      "subject": "Sleep",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Smoking",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Alcohol",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Metabolic Health",
+      "predicate": "related to",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Exercise",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Diet",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Stress",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Testicular Cooling",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Sauna Protocol",
+      "predicate": "affects",
+      "object": "Sperm Health"
+    },
+    {
+      "subject": "Biomarker Measurement",
+      "predicate": "involves",
+      "object": "Biomarkers"
+    },
+    {
+      "subject": "Epigenetic Marker",
+      "predicate": "measures",
+      "object": "Biological Age"
+    },
+    {
+      "subject": "Dna Methylation",
+      "predicate": "is a",
+      "object": "Epigenetic Marker"
+    },
+    {
+      "subject": "Telomere Length",
+      "predicate": "measures",
+      "object": "Biological Age"
+    },
+    {
+      "subject": "Inflammation Markers",
+      "predicate": "measures",
+      "object": "Inflammation"
+    },
+    {
+      "subject": "High Sensitivity Crp",
+      "predicate": "is a",
+      "object": "Inflammation Markers"
+    },
+    {
+      "subject": "Tnf Alpha",
+      "predicate": "is a",
+      "object": "Inflammation Markers"
+    },
+    {
+      "subject": "Il6",
+      "predicate": "is a",
+      "object": "Inflammation Markers"
+    },
+    {
+      "subject": "Hormone Health",
+      "predicate": "involves",
+      "object": "Hormones"
+    },
+    {
+      "subject": "Sleep Health",
+      "predicate": "involves",
+      "object": "Sleep"
+    },
+    {
+      "subject": "Randomized Control Trial",
+      "predicate": "is a",
+      "object": "Scientific Evidence"
+    },
+    {
+      "subject": "N Of One Study",
+      "predicate": "is a",
+      "object": "Scientific Evidence"
+    },
+    {
+      "subject": "Biological Age Measurement",
+      "predicate": "measures",
+      "object": "Biological Age"
+    },
+    {
+      "subject": "Oral Health",
+      "predicate": "involves",
+      "object": "Attachment Loss"
+    },
+    {
+      "subject": "Oral Health",
+      "predicate": "involves",
+      "object": "Pocket Depth"
+    },
+    {
+      "subject": "Prp Therapy",
+      "predicate": "uses",
+      "object": "Growth Factors"
+    },
+    {
+      "subject": "Prp Therapy",
+      "predicate": "improves",
+      "object": "Oral Health"
+    },
+    {
+      "subject": "Endogane",
+      "predicate": "improves",
+      "object": "Oral Health"
+    },
+    {
+      "subject": "Superglue For Gums",
+      "predicate": "improves",
+      "object": "Oral Health"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "triples": [
+    {
+      "subject": "Today",
+      "predicate": "co_occurs_with",
+      "object": "Sarah Johnson"
+    },
+    {
+      "subject": "Today",
+      "predicate": "co_occurs_with",
+      "object": "MIT"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "co_occurs_with",
+      "object": "MIT"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "works at",
+      "object": "MIT"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "expert in",
+      "object": "artificial intelligence"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "expert in",
+      "object": "machine learning"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "expert in",
+      "object": "neural networks"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "expert in",
+      "object": "deep learning"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "published",
+      "object": "Nature magazine"
+    },
+    {
+      "subject": "Sarah Johnson",
+      "predicate": "researches",
+      "object": "transformer architectures"
+    },
+    {
+      "subject": "Johnson",
+      "predicate": "co_occurs_with",
+      "object": "over 10 years"
+    },
+    {
+      "subject": "Johnson",
+      "predicate": "co_occurs_with",
+      "object": "10 years"
+    },
+    {
+      "subject": "Dr. Sarah Johnson",
+      "predicate": "from",
+      "object": "MIT"
+    },
+    {
+      "subject": "Nature",
+      "predicate": "part_of",
+      "object": "Nature magazine"
+    },
+    {
+      "subject": "Nature",
+      "predicate": "part_of",
+      "object": "Nature magazine"
+    },
+    {
+      "subject": "She",
+      "predicate": "published",
+      "object": "research"
+    },
+    {
+      "subject": "She",
+      "predicate": "published",
+      "object": "research"
+    },
+    {
+      "subject": "research",
+      "predicate": "on",
+      "object": "transformer"
+    },
+    {
+      "subject": "research",
+      "predicate": "on",
+      "object": "transformer"
+    },
+    {
+      "subject": "research",
+      "predicate": "is about",
+      "object": "transformer architectures"
+    },
+    {
+      "subject": "research",
+      "predicate": "is about",
+      "object": "attention mechanisms"
+    },
+    {
+      "subject": "Dr. Johnson",
+      "predicate": "works on",
+      "object": "deep learning"
+    },
+    {
+      "subject": "Dr. Johnson",
+      "predicate": "has experience",
+      "object": "10 years"
+    },
+    {
+      "subject": "Dr. Johnson",
+      "predicate": "published",
+      "object": "Nature magazine"
+    },
+    {
+      "subject": "machine",
+      "predicate": "part_of",
+      "object": "machine learning"
+    },
+    {
+      "subject": "Dr.",
+      "predicate": "part_of",
+      "object": "Dr. Sarah Johnson"
+    },
+    {
+      "subject": "Dr.",
+      "predicate": "part_of",
+      "object": "Dr. Johnson"
+    },
+    {
+      "subject": "Dr.",
+      "predicate": "part_of",
+      "object": "Dr. Johnson"
+    },
+    {
+      "subject": "Sarah",
+      "predicate": "part_of",
+      "object": "Dr. Sarah Johnson"
+    },
+    {
+      "subject": "transformer",
+      "predicate": "part_of",
+      "object": "transformer architectures"
+    },
+    {
+      "subject": "transformer",
+      "predicate": "part_of",
+      "object": "transformer architectures"
+    },
+    {
+      "subject": "attention mechanisms",
+      "predicate": "improve",
+      "object": "processing tasks"
+    },
+    {
+      "subject": "attention mechanisms",
+      "predicate": "improve",
+      "object": "processing tasks"
+    },
+    {
+      "subject": "attention mechanisms",
+      "predicate": "improve",
+      "object": "natural language processing tasks"
+    },
+    {
+      "subject": "attention mechanisms",
+      "predicate": "can improve",
+      "object": "natural language processing tasks"
+    },
+    {
+      "subject": "The research",
+      "predicate": "shows",
+      "object": "attention mechanisms"
+    },
+    {
+      "subject": "attention",
+      "predicate": "part_of",
+      "object": "attention mechanisms"
+    },
+    {
+      "subject": "attention",
+      "predicate": "part_of",
+      "object": "attention mechanisms"
+    },
+    {
+      "subject": "natural language",
+      "predicate": "part_of",
+      "object": "language processing"
+    },
+    {
+      "subject": "natural language",
+      "predicate": "part_of",
+      "object": "language processing"
+    },
+    {
+      "subject": "language processing",
+      "predicate": "part_of",
+      "object": "processing tasks"
+    },
+    {
+      "subject": "language processing",
+      "predicate": "part_of",
+      "object": "processing tasks"
+    }
+  ]
+}

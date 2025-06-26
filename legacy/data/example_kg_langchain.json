@@ -1,0 +1,224 @@
+{
+  "triples": [
+    {
+      "subject": "Chatgpt",
+      "predicate": "developed by",
+      "object": "Openai"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "deployed in",
+      "object": "2022"
+    },
+    {
+      "subject": "Gemini",
+      "predicate": "developed by",
+      "object": "Google"
+    },
+    {
+      "subject": "Co-Pilot",
+      "predicate": "developed by",
+      "object": "Microsoft"
+    },
+    {
+      "subject": "Claude",
+      "predicate": "developed by",
+      "object": "Anthropic"
+    },
+    {
+      "subject": "Gro",
+      "predicate": "developed by",
+      "object": "Xai"
+    },
+    {
+      "subject": "Lchat",
+      "predicate": "developed by",
+      "object": "French Company"
+    },
+    {
+      "subject": "Deepseek",
+      "predicate": "published",
+      "object": "Reinforcement Learning Paper By Deepseek"
+    },
+    {
+      "subject": "Chatbot Arena",
+      "predicate": "ranks",
+      "object": "Large Language Models"
+    },
+    {
+      "subject": "Scale Leaderboard",
+      "predicate": "ranks",
+      "object": "Large Language Models"
+    },
+    {
+      "subject": "Tik Tokenizer",
+      "predicate": "visualizes",
+      "object": "Token Sequence"
+    },
+    {
+      "subject": "Large Language Models",
+      "predicate": "uses",
+      "object": "Token"
+    },
+    {
+      "subject": "Large Language Models",
+      "predicate": "uses",
+      "object": "Token Sequence"
+    },
+    {
+      "subject": "Large Language Models",
+      "predicate": "training stage",
+      "object": "Pre-Training"
+    },
+    {
+      "subject": "Large Language Models",
+      "predicate": "training stage",
+      "object": "Post-Training"
+    },
+    {
+      "subject": "Pre-Training",
+      "predicate": "trains",
+      "object": "Neural Network"
+    },
+    {
+      "subject": "Neural Network",
+      "predicate": "has",
+      "object": "Parameters"
+    },
+    {
+      "subject": "Post-Training",
+      "predicate": "includes",
+      "object": "Reinforcement Learning"
+    },
+    {
+      "subject": "Reinforcement Learning",
+      "predicate": "produces",
+      "object": "Thinking Models"
+    },
+    {
+      "subject": "Thinking Models",
+      "predicate": "applies to",
+      "object": "Mathematics"
+    },
+    {
+      "subject": "Thinking Models",
+      "predicate": "applies to",
+      "object": "Coding"
+    },
+    {
+      "subject": "Thinking Models",
+      "predicate": "applies to",
+      "object": "Programming"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Internet Search Tool"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Advanced Data Analysis"
+    },
+    {
+      "subject": "Claude 3.7",
+      "predicate": "related to",
+      "object": "Arc Institute"
+    },
+    {
+      "subject": "Claude 3.7",
+      "predicate": "related to",
+      "object": "Evo 2"
+    },
+    {
+      "subject": "Cursor",
+      "predicate": "uses api of",
+      "object": "Claude 3.7"
+    },
+    {
+      "subject": "Cursor",
+      "predicate": "assists in",
+      "object": "Programming"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "supports",
+      "object": "Multimodality"
+    },
+    {
+      "subject": "Multimodality",
+      "predicate": "includes",
+      "object": "Speech To Text"
+    },
+    {
+      "subject": "Multimodality",
+      "predicate": "includes",
+      "object": "Text To Speech"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Advanced Voice Mode"
+    },
+    {
+      "subject": "Grock",
+      "predicate": "has feature",
+      "object": "Advanced Voice Mode"
+    },
+    {
+      "subject": "Notebooklm",
+      "predicate": "assists in",
+      "object": "Language Learning"
+    },
+    {
+      "subject": "Notebooklm",
+      "predicate": "has feature",
+      "object": "Podcast Generation"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "uses",
+      "object": "Image Tokens"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Dall\u00b7E 3"
+    },
+    {
+      "subject": "Ideogram",
+      "predicate": "performs",
+      "object": "Image Generation"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "interacts with",
+      "object": "Video Generation Models"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Chatgpt Memory Feature"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Custom Instructions"
+    },
+    {
+      "subject": "Chatgpt",
+      "predicate": "has feature",
+      "object": "Custom Gpts"
+    },
+    {
+      "subject": "Custom Gpts",
+      "predicate": "applies to",
+      "object": "Language Learning"
+    },
+    {
+      "subject": "Custom Gpts",
+      "predicate": "applies to",
+      "object": "Translation"
+    }
+  ]
+}
