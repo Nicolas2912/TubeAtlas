@@ -133,6 +133,9 @@ logs/
 secrets/
 credentials/
 
+# IMPORTANT: Never commit actual API keys!
+# Keep .cursor/mcp.json with placeholder values only
+
 # Task files (Taskmaster)
 # Uncomment if you don't want to track tasks
 # .taskmaster/tasks/
