@@ -32,7 +32,7 @@ Each task report provides:
 | 2.2 | Define Declarative Base and create_all Utility | ✅ COMPLETED | [task-2.2-define-declarative-base-create-all.md](./task-2.2-define-declarative-base-create-all.md) |
 | 2.3 | Implement ORM Models with Columns and Indexes | ✅ COMPLETED | [task-2.3-implement-orm-models-columns-indexes.md](./task-2.3-implement-orm-models-columns-indexes.md) |
 | 2.4 | Build Repository Layer with CRUD Operations | ✅ COMPLETED | [task-2.4-build-repository-layer-crud-operations.md](./task-2.4-build-repository-layer-crud-operations.md) |
-| 2.5 | Integrate Healthcheck Middleware and Startup Hooks into FastAPI | 📋 PENDING | *Awaiting 2.1, 2.4* |
+| 2.5 | Integrate Healthcheck Middleware and Startup Hooks into FastAPI | ✅ COMPLETED | [task-2.5-healthcheck-middleware-startup-hooks.md](./task-2.5-healthcheck-middleware-startup-hooks.md) |
 
 ### Maintenance & Fixes
 

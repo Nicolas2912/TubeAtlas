@@ -118,7 +118,7 @@
               3
             ],
             "details": "• In app/repositories/, define BaseRepository<T> with create, get, update, delete, list methods accepting AsyncSession.\n• Use SQLAlchemy 2.0 style async queries (select(), update(), delete()).\n• Implement VideoRepository, TranscriptRepository, KnowledgeGraphRepository, ProcessingTaskRepository inheriting from BaseRepository and adding domain-specific helpers (e.g., list_by_channel).\n• Ensure methods receive session via dependency injection (get_session from step 1).",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Mock an in-memory sqlite URI, run create_all(), then test each CRUD method adding, fetching, updating, and deleting records."
           },
           {
@@ -129,8 +129,8 @@
               1,
               4
             ],
-            "details": "• In main.py, add @app.on_event('startup') async def db_startup(): await create_all() and test a simple SELECT 1.\n• Implement middleware catching DB exceptions and transforming into 503 errors.\n• Add /health/db endpoint that opens an AsyncSession, runs SELECT 1, and returns 200 OK if success.\n• Register middleware and endpoint with FastAPI.",
-            "status": "pending",
+            "details": "• In main.py, add @app.on_event('startup') async def db_startup(): await create_all() and test a simple SELECT 1.\n• Implement middleware catching DB exceptions and transforming into 503 errors.\n• Add /health/db endpoint that opens an AsyncSession, runs SELECT 1, and returns 200 OK if success.\n• Register middleware and endpoint with FastAPI.\n<info added on 2025-06-27T15:46:50.484Z>\n• Implementation verified: lifespan-based startup/shutdown, health middleware, and `/health` endpoints are all live and tested (Task 2.5 COMPLETE).\n</info added on 2025-06-27T15:46:50.484Z>",
+            "status": "done",
             "testStrategy": "Spin up TestClient, call /health/db expecting 200; simulate engine.dispose() then ensure middleware converts failure to 503."
           }
         ]
@@ -257,7 +257,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T15:20:22.048Z",
+      "updated": "2025-06-27T15:49:35.834Z",
       "description": "Tasks for master context"
     }
   }
