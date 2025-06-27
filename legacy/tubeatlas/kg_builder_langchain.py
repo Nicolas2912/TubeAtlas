@@ -37,9 +37,7 @@ class GraphBuilderConfig:
     strict_mode: bool = True
     db_path: str = "data/AndrejKarpathy.db"
     output_path: str = "data/example_kg_langchain.json"
-    additional_instructions: str = (
-        "Focus on direct factual relationships. Identify specific research topics and fields of study."
-    )
+    additional_instructions: str = "Focus on direct factual relationships. Identify specific research topics and fields of study."
     max_tokens: int = 1_000_000  # Maximum number of tokens allowed in input text
 
 

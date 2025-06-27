@@ -543,9 +543,9 @@ def get_batch_job_results(batch_id: str) -> dict:
                     f"Successfully processed {parsed_lines} lines from output file {batch_job.output_file_id}."
                 )
             else:
-                results_payload["retrieval_message"] = (
-                    "Batch job completed, but no output file ID found."
-                )
+                results_payload[
+                    "retrieval_message"
+                ] = "Batch job completed, but no output file ID found."
                 logger.warning(results_payload["retrieval_message"])
 
         elif batch_job.status == "failed":
@@ -573,9 +573,9 @@ def get_batch_job_results(batch_id: str) -> dict:
                     error_file_content_response = client.files.content(
                         batch_job.error_file_id
                     )
-                    results_payload["error_file_raw_content"] = (
-                        error_file_content_response.content.decode("utf-8")
-                    )
+                    results_payload[
+                        "error_file_raw_content"
+                    ] = error_file_content_response.content.decode("utf-8")
                 except Exception as e:
                     logger.error(
                         f"Failed to retrieve or decode error file {batch_job.error_file_id}: {e}",
@@ -603,9 +603,9 @@ def get_batch_job_results(batch_id: str) -> dict:
                         }
                     )
         else:
-            results_payload["retrieval_message"] = (
-                f"Batch job {batch_id} is currently {batch_job.status}."
-            )
+            results_payload[
+                "retrieval_message"
+            ] = f"Batch job {batch_id} is currently {batch_job.status}."
             logger.info(results_payload["retrieval_message"])
 
     except Exception as e:
