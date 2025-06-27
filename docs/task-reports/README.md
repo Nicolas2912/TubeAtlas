@@ -34,8 +34,9 @@ Each task report provides:
 | 2.4 | Build Repository Layer with CRUD Operations | 📋 PENDING | *Awaiting 2.3* |
 | 2.5 | Integrate Healthcheck Middleware and Startup Hooks into FastAPI | 📋 PENDING | *Awaiting 2.1, 2.4* |
 
-### Future Tasks
-Additional task reports will be added as development progresses through the project phases.
+### Maintenance & Fixes
+
+- **CI/CD** ✅ [CI/CD Pipeline Issues Fixed](ci-cd-pipeline-fixes.md) - Legacy code conflicts, hook updates, baseline regeneration
 
 ## Report Format
 
@@ -55,3 +56,12 @@ These reports serve as:
 - **Reference** for troubleshooting and maintenance
 - **Knowledge base** for team members and future development
 - **Audit trail** for project management and quality assurance
+
+## Status Legend
+- ✅ **COMPLETED** - Task fully implemented and verified
+- 🔄 **IN PROGRESS** - Currently being worked on
+- ⏸️ **PAUSED** - Temporarily paused
+- ❌ **BLOCKED** - Waiting for dependencies or resolution
+
+## Next Tasks
+Refer to the main project task list for upcoming work items.
