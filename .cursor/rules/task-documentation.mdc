@@ -1,11 +1,11 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 When you finished a task or subtask from taskmaster do this:
 
-Create a markdown file where you write about your task, what you have done, why you have done it, how you verified it and why it is correct and solves the task. Also explain problems you faced while implementing and how you solved it. 
+Create a markdown file where you write about your task, what you have done, why you have done it, how you verified it and why it is correct and solves the task. Also explain problems you faced while implementing and how you solved it.
 
 Be directly, honest, logical, precise and structured.
 Write this in the docs/task-reports folder and update also the README.md in this folder

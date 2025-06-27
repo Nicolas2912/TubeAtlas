@@ -1,12 +1,12 @@
 <html>
     <head>
         <meta charset="utf-8">
-        
+
             <script src="lib/bindings/utils.js"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-        
+
+
 <center>
 <h1></h1>
 </center>
@@ -40,32 +40,32 @@
                  float: left;
              }
 
-             
 
-             
+
+
              #config {
                  float: left;
                  width: 400px;
                  height: 600px;
              }
-             
 
-             
+
+
         </style>
     </head>
 
 
     <body>
         <div class="card" style="width: 100%">
-            
-            
+
+
             <div id="mynetwork" class="card-body"></div>
         </div>
 
-        
-        
+
+
             <div id="config"></div>
-        
+
 
         <script type="text/javascript">
 
@@ -85,15 +85,15 @@
                   value : []
               };
 
-              
 
-              
+
+
 
               // This method is responsible for drawing the graph, returns the drawn network
               function drawGraph() {
                   var container = document.getElementById('mynetwork');
 
-                  
+
 
                   // parsing and collecting nodes and edges from the python
                   nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Today", "label": "Today", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sarah Johnson", "label": "Sarah Johnson", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MIT", "label": "MIT", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Johnson", "label": "Johnson", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "over 10 years", "label": "over 10 years", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "10 years", "label": "10 years", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nature", "label": "Nature", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nature magazine", "label": "Nature magazine", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dr. Sarah Johnson", "label": "Dr. Sarah Johnson", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "research", "label": "research", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "transformer", "label": "transformer", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "She", "label": "She", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "machine", "label": "machine", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "machine learning", "label": "machine learning", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dr.", "label": "Dr.", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dr. Johnson", "label": "Dr. Johnson", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sarah", "label": "Sarah", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "transformer architectures", "label": "transformer architectures", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "attention mechanisms", "label": "attention mechanisms", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "processing tasks", "label": "processing tasks", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "attention", "label": "attention", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "natural language", "label": "natural language", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "language processing", "label": "language processing", "shape": "dot"}]);
@@ -141,25 +141,25 @@
     }
 };
 
-                  
 
 
-                  
+
+
                   // if this network requires displaying the configure window,
                   // put it in its div
                   options.configure["container"] = document.getElementById("config");
-                  
+
 
                   network = new vis.Network(container, data, options);
 
-                  
-
-                  
-
-                  
 
 
-                  
+
+
+
+
+
+
 
                   return network;
 

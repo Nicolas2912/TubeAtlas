@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: false
 ---
 When working with pandas always use these commands after importing pandas: pd.set_option('display.width', 1000)

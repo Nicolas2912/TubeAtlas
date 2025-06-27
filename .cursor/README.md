@@ -32,4 +32,4 @@ Other API keys (XAI, OpenRouter, Mistral, Azure, Ollama) are optional depending 
 
 ## TaskMaster Integration
 
-The MCP configuration enables Cursor to use TaskMaster for project management. See the main README.md for TaskMaster usage instructions. 
+The MCP configuration enables Cursor to use TaskMaster for project management. See the main README.md for TaskMaster usage instructions.

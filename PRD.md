@@ -2,9 +2,9 @@
 
 ## 1. Project Overview
 
-**Product Name:** TubeAtlas  
-**Version:** 2.0  
-**Date:** January 2025  
+**Product Name:** TubeAtlas
+**Version:** 2.0
+**Date:** January 2025
 **Document Status:** Draft
 
 ### 1.1 Vision
@@ -103,7 +103,7 @@ To provide researchers, content creators, and analysts with powerful tools to un
 - **FR-8.2**: Support conversational chat with knowledge graphs
 - **FR-8.3**: Provide context-aware responses using retrieved content
 - **FR-8.4**: Implement query history and session management
-- **FR-8.5**: Support both single-video and channel-wide queries. 
+- **FR-8.5**: Support both single-video and channel-wide queries.
 - **FR-8.6**: Handle chanell-wide queries with context >1M tokens through advanced and efficient techniques like RAG etc.
 
 #### 4.3.3 Visualization Endpoints
@@ -183,9 +183,9 @@ Channel Content Processing Pipeline:
 ```python
 # Conceptual RAG Pipeline
 1. Query Analysis → Extract intent, entities, temporal markers
-2. Multi-Modal Retrieval → 
+2. Multi-Modal Retrieval →
    - Semantic: Find similar content chunks
-   - Keyword: Match exact terms/phrases  
+   - Keyword: Match exact terms/phrases
    - Graph: Traverse related entities
    - Temporal: Filter by time relevance
 3. Context Ranking → Score and rank retrieved chunks
@@ -269,7 +269,7 @@ class ContextAssembler:
     def __init__(self, max_tokens: int = 100000):
         self.max_tokens = max_tokens
         self.token_buffer = 0.1  # Reserve 10% for response
-        
+
     def assemble_context(self, query: str, channel_id: str) -> Dict:
         """
         Intelligent context assembly for large-scale content.
@@ -278,24 +278,24 @@ class ContextAssembler:
         query_intent = self.analyze_query_intent(query)
         entities = self.extract_entities(query)
         temporal_markers = self.extract_temporal_info(query)
-        
+
         # 2. Multi-Modal Retrieval
         semantic_chunks = self.semantic_retrieval(query, channel_id, top_k=20)
         keyword_chunks = self.keyword_retrieval(query, channel_id, top_k=10)
         graph_chunks = self.graph_retrieval(entities, channel_id, top_k=15)
-        
+
         # 3. Unified Ranking and Deduplication
         all_chunks = self.merge_and_deduplicate([
             semantic_chunks, keyword_chunks, graph_chunks
         ])
         ranked_chunks = self.rank_chunks(all_chunks, query_intent)
-        
+
         # 4. Token-Aware Context Selection
         selected_context = self.select_optimal_context(
-            ranked_chunks, 
+            ranked_chunks,
             max_tokens=int(self.max_tokens * (1 - self.token_buffer))
         )
-        
+
         return {
             "context": selected_context,
             "sources": self.extract_sources(selected_context),
@@ -318,15 +318,15 @@ class IncrementalKGBuilder:
         """
         # 1. Extract entities from new content only
         new_entities = self.extract_entities_batch(new_content)
-        
+
         # 2. Find connections to existing KG
         existing_entities = self.get_channel_entities(channel_id)
         connections = self.find_entity_connections(new_entities, existing_entities)
-        
+
         # 3. Merge with existing graph
         self.merge_entities(new_entities, existing_entities)
         self.update_relationships(connections)
-        
+
         # 4. Update embeddings incrementally
         self.update_entity_embeddings(new_entities)
 ```
@@ -344,7 +344,7 @@ QUERY_PATTERNS = {
         "max_chunks": 15
     },
     "conceptual": {
-        "strategy": "broad_context", 
+        "strategy": "broad_context",
         "retrievers": ["semantic", "graph"],
         "chunk_types": ["summary", "entity"],
         "max_chunks": 25
@@ -385,14 +385,14 @@ CACHE_LEVELS = {
         "content": "frequent query results"
     },
     "L2_Embedding_Cache": {
-        "type": "redis", 
+        "type": "redis",
         "size": "1GB",
         "ttl": "24 hours",
         "content": "computed embeddings"
     },
     "L3_Context_Cache": {
         "type": "disk",
-        "size": "10GB", 
+        "size": "10GB",
         "ttl": "7 days",
         "content": "assembled contexts"
     }
@@ -777,6 +777,6 @@ POST /api/v1/tasks/{task_id}/cancel
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: January 2025  
+**Document Version**: 1.0
+**Last Updated**: January 2025
 **Next Review**: March 2025

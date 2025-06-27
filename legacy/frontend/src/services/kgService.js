@@ -14,11 +14,11 @@ export class KGService {
   static async fetchKnowledgeGraph(dataset = 'bryanjohnson') {
     try {
       const response = await fetch(`${API_BASE_URL}/api/kg/${dataset}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch knowledge graph: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
@@ -35,11 +35,11 @@ export class KGService {
   static async loadLocalKG(filename = 'complete_kg_langchain_bryanjohnson.json') {
     try {
       const response = await fetch(`/data/${filename}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load local KG file: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
@@ -56,15 +56,15 @@ export class KGService {
   static transformToSigmaFormat(triples) {
     const nodes = new Map();
     const edges = [];
-    
+
     // Extract unique nodes and create edges
     triples.forEach((triple, index) => {
       const { subject, predicate, object } = triple;
-      
+
       // Ensure string keys
       const subjectKey = String(subject);
       const objectKey = String(object);
-      
+
       // Add subject node
       if (!nodes.has(subjectKey)) {
         nodes.set(subjectKey, {
@@ -76,7 +76,7 @@ export class KGService {
           y: Math.random() * 100
         });
       }
-      
+
       // Add object node
       if (!nodes.has(objectKey)) {
         nodes.set(objectKey, {
@@ -88,7 +88,7 @@ export class KGService {
           y: Math.random() * 100
         });
       }
-      
+
       // Add edge
       edges.push({
         key: `edge-${index}`,
@@ -101,7 +101,7 @@ export class KGService {
         type: 'line'
       });
     });
-    
+
     // Update node sizes based on connections
     const nodeDegrees = new Map();
     edges.forEach(edge => {
@@ -110,14 +110,14 @@ export class KGService {
       nodeDegrees.set(sourceKey, (nodeDegrees.get(sourceKey) || 0) + 1);
       nodeDegrees.set(targetKey, (nodeDegrees.get(targetKey) || 0) + 1);
     });
-    
+
     // Scale node sizes based on degree
     Array.from(nodes.values()).forEach(node => {
       const nodeKey = String(node.key);
       const degree = nodeDegrees.get(nodeKey) || 1;
       node.size = Math.max(5, Math.min(25, degree * 3));
     });
-    
+
     return {
       nodes: Array.from(nodes.values()),
       edges: edges
@@ -131,7 +131,7 @@ export class KGService {
    */
   static getNodeColor(nodeLabel) {
     const label = nodeLabel.toLowerCase();
-    
+
     // Define color categories
     if (label.includes('research') || label.includes('study') || label.includes('paper')) {
       return '#3b82f6'; // Blue for research
@@ -167,9 +167,9 @@ export class KGService {
       { subject: "Exercise Routine", predicate: "enhances", object: "Physical Health" },
       { subject: "Data Tracking", predicate: "enables", object: "Personalized Medicine" }
     ];
-    
+
     return { triples: mockTriples };
   }
 }
 
-export default KGService; 
+export default KGService;

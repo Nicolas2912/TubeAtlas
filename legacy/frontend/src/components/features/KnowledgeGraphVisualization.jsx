@@ -5,11 +5,11 @@ import { circular } from 'graphology-layout';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import { Search, ZoomIn, ZoomOut, RotateCcw, Settings, Filter } from 'lucide-react';
 
-const KnowledgeGraphVisualization = ({ 
-  graphData, 
-  onNodeClick, 
+const KnowledgeGraphVisualization = ({
+  graphData,
+  onNodeClick,
   onEdgeClick,
-  className = '' 
+  className = ''
 }) => {
   const containerRef = useRef(null);
   const sigmaRef = useRef(null);
@@ -29,11 +29,11 @@ const KnowledgeGraphVisualization = ({
   // Initialize sigma instance
   useEffect(() => {
     if (!containerRef.current || !graphData) {
-      console.log('Container or graph data not ready:', { 
-        hasContainer: !!containerRef.current, 
+      console.log('Container or graph data not ready:', {
+        hasContainer: !!containerRef.current,
         hasGraphData: !!graphData,
         nodeCount: graphData?.nodes?.length,
-        edgeCount: graphData?.edges?.length 
+        edgeCount: graphData?.edges?.length
       });
       return;
     }
@@ -85,21 +85,21 @@ const KnowledgeGraphVisualization = ({
         graphData.edges.forEach((edge, index) => {
           try {
             console.log(`Processing edge ${index}:`, edge);
-            
+
             // Safely extract and convert keys to strings
             const sourceKey = edge.source ? String(edge.source) : null;
             const targetKey = edge.target ? String(edge.target) : null;
-            
+
             console.log(`Edge ${index} keys: source="${sourceKey}", target="${targetKey}"`);
-            
+
             // Validate that we have valid source and target
             if (!sourceKey || !targetKey) {
               console.warn(`✗ Edge ${index} has invalid source or target:`, { sourceKey, targetKey, edge });
               return;
             }
-            
+
             console.log(`Nodes exist? source=${graph.hasNode(sourceKey)}, target=${graph.hasNode(targetKey)}`);
-            
+
             if (graph.hasNode(sourceKey) && graph.hasNode(targetKey)) {
               // Ensure unique edge key
               let edgeKey = edge.key || `edge-${index}`;
@@ -109,7 +109,7 @@ const KnowledgeGraphVisualization = ({
                 edgeKey = `${edge.key || `edge-${index}`}-${keyCounter}`;
               }
               usedEdgeKeys.add(edgeKey);
-              
+
               const edgeAttributes = {
                 label: edge.label || edge.predicate || 'related_to',
                 color: edge.color || '#666666',
@@ -117,14 +117,14 @@ const KnowledgeGraphVisualization = ({
                 type: 'line',
                 originalColor: edge.color || '#666666'
               };
-              
+
               console.log(`Attempting to add edge:`, {
                 key: edgeKey,
-                source: sourceKey, 
+                source: sourceKey,
                 target: targetKey,
                 attributes: edgeAttributes
               });
-              
+
               // Use a try-catch specifically for the addEdge call
               try {
                 // Try the standard graphology signature: addEdge(source, target, attributes)
@@ -138,7 +138,7 @@ const KnowledgeGraphVisualization = ({
               } catch (addEdgeError) {
                 console.error(`✗ Failed to add edge ${index} with signature addEdge(source, target, attributes):`, addEdgeError);
                 console.error('Attempted parameters:', { sourceKey, targetKey, edgeAttributes });
-                
+
                 // Try alternative approach with key as first parameter
                 try {
                   const altKey = `alt-edge-${index}-${Date.now()}`;
@@ -147,7 +147,7 @@ const KnowledgeGraphVisualization = ({
                   console.log(`✓ Added edge with 4-parameter signature: ${altKey}`);
                 } catch (altError) {
                   console.error(`✗ Both signatures failed:`, altError);
-                  
+
                   // Try with edge method that auto-generates key
                   try {
                     const autoEdge = graph.addEdge(sourceKey, targetKey);
@@ -197,19 +197,19 @@ const KnowledgeGraphVisualization = ({
         // Better distributed positioning for large graphs
         const nodeCount = graph.order;
         const radius = Math.max(200, Math.sqrt(nodeCount) * 50); // Larger base radius for large graphs
-        
+
         let nodeIndex = 0;
         graph.forEachNode((node, attributes) => {
           // Use improved spiral distribution for better spacing
           const goldenAngle = 2.39996322972865332; // Golden angle in radians
           const angle = nodeIndex * goldenAngle;
           const r = radius * Math.sqrt(nodeIndex / Math.max(nodeCount, 10)); // Prevent division by small numbers
-          
+
           // Add some randomness to prevent perfect alignment
           const jitter = 20;
           const x = r * Math.cos(angle) + (Math.random() - 0.5) * jitter;
           const y = r * Math.sin(angle) + (Math.random() - 0.5) * jitter;
-          
+
           graph.setNodeAttribute(node, 'x', x);
           graph.setNodeAttribute(node, 'y', y);
           nodeIndex++;
@@ -220,14 +220,14 @@ const KnowledgeGraphVisualization = ({
       graph.forEachNode((node, attributes) => {
         const x = graph.getNodeAttribute(node, 'x');
         const y = graph.getNodeAttribute(node, 'y');
-        
+
         if (!isFinite(x) || !isFinite(y)) {
           console.warn(`Node ${node} has invalid coordinates: x=${x}, y=${y}. Setting to (0,0)`);
           graph.setNodeAttribute(node, 'x', 0);
           graph.setNodeAttribute(node, 'y', 0);
         }
       });
-      
+
       console.log('Node coordinates validation complete. Sample nodes:');
       let sampleCount = 0;
       graph.forEachNode((node, attributes) => {
@@ -245,7 +245,7 @@ const KnowledgeGraphVisualization = ({
         labelSize: 16,
         labelWeight: '600',
         labelColor: { color: '#1f2937' },
-        
+
         // Edge rendering - better visibility
         renderEdges: true,
         renderEdgeLabels: filters.showLabels,
@@ -253,25 +253,25 @@ const KnowledgeGraphVisualization = ({
         edgeLabelSize: 12,
         edgeLabelWeight: '500',
         edgeLabelColor: { color: '#6b7280' },
-        
+
         // Default colors - improved contrast
         defaultNodeColor: '#94a3b8',
         defaultEdgeColor: '#e2e8f0',
-        
+
         // Performance and interaction settings
         hideEdgesOnMove: false,
         hideLabelsOnMove: false,
         enableEdgeClickEvents: true,
         enableEdgeWheelEvents: false,
         enableEdgeHoverEvents: true,
-        
+
         // Reducers for enhanced styling - optimized for large graphs
         nodeReducer: (node, data) => {
           const nodeCount = graph.order;
           // Scale node sizes based on graph size for better readability
           const baseSize = nodeCount > 50 ? 8 : nodeCount > 25 ? 10 : 12;
           const maxSize = nodeCount > 50 ? 16 : nodeCount > 25 ? 20 : 24;
-          
+
           return {
             ...data,
             size: Math.max(baseSize, Math.min(maxSize, data.size || baseSize + 2)),
@@ -290,7 +290,7 @@ const KnowledgeGraphVisualization = ({
           // Make edges thinner and more transparent for large graphs
           const edgeOpacity = nodeCount > 50 ? 0.4 : nodeCount > 25 ? 0.6 : 0.8;
           const baseSize = nodeCount > 50 ? 1 : nodeCount > 25 ? 1.5 : 2;
-          
+
           return {
             ...data,
             color: data.color || `rgba(203, 213, 225, ${edgeOpacity})`,
@@ -332,11 +332,11 @@ const KnowledgeGraphVisualization = ({
         sigma.on('updated', () => {
           const camera = sigma.getCamera();
           const zoomRatio = camera.ratio;
-          
+
           // Show labels only when zoomed in enough for large graphs
           const shouldShowLabels = zoomRatio < 0.8;
           const shouldShowEdgeLabels = zoomRatio < 0.5;
-          
+
           sigma.setSetting('renderLabels', shouldShowLabels);
           sigma.setSetting('renderEdgeLabels', shouldShowEdgeLabels);
         });
@@ -350,7 +350,7 @@ const KnowledgeGraphVisualization = ({
           sigma.setSetting('renderEdgeLabels', graph.order <= 25); // Only show edge labels for smaller graphs initially
           sigma.setSetting('hideEdgesOnMove', graph.order > 50); // Hide edges on move for large graphs
           sigma.setSetting('hideLabelsOnMove', graph.order > 30); // Hide labels on move for medium+ graphs
-          
+
           // Auto-fit the graph to view for better initial experience
           const camera = sigma.getCamera();
           const nodePositions = [];
@@ -360,18 +360,18 @@ const KnowledgeGraphVisualization = ({
               y: graph.getNodeAttribute(node, 'y')
             });
           });
-          
+
           if (nodePositions.length > 0) {
             const minX = Math.min(...nodePositions.map(p => p.x));
             const maxX = Math.max(...nodePositions.map(p => p.x));
             const minY = Math.min(...nodePositions.map(p => p.y));
             const maxY = Math.max(...nodePositions.map(p => p.y));
-            
+
             const width = maxX - minX;
             const height = maxY - minY;
             const centerX = (minX + maxX) / 2;
             const centerY = (minY + maxY) / 2;
-            
+
             // Calculate zoom to fit all nodes with some padding
             const padding = 50;
             const containerWidth = containerRef.current.clientWidth;
@@ -379,14 +379,14 @@ const KnowledgeGraphVisualization = ({
             const zoomX = containerWidth / (width + padding * 2);
             const zoomY = containerHeight / (height + padding * 2);
             const zoom = Math.min(zoomX, zoomY, 1); // Don't zoom in more than 1:1
-            
+
             camera.animate({
               x: centerX,
               y: centerY,
               ratio: 1 / zoom
             }, { duration: 1000 });
           }
-          
+
           // Force multiple refreshes to ensure proper rendering
           sigma.refresh();
           setTimeout(() => {
@@ -401,7 +401,7 @@ const KnowledgeGraphVisualization = ({
               });
             }
           }, 100);
-          
+
           setIsLoading(false);
         }
       }, 100);
@@ -506,17 +506,17 @@ const KnowledgeGraphVisualization = ({
     try {
       setIsLayoutRunning(true);
       const graph = graphRef.current;
-      
+
       // Configure and run enhanced force-directed layout optimized for large graphs
       const settings = forceAtlas2.inferSettings(graph);
       const nodeCount = graph.order;
-      
+
       // Adjust settings based on graph size
       const iterations = nodeCount > 50 ? 150 : nodeCount > 25 ? 120 : 100;
       const scalingRatio = nodeCount > 50 ? 50 : nodeCount > 25 ? 30 : 10;
       const gravity = nodeCount > 50 ? 0.1 : nodeCount > 25 ? 0.2 : 0.3;
-      
-      forceAtlas2.assign(graph, { 
+
+      forceAtlas2.assign(graph, {
         iterations,
         settings: {
           ...settings,
@@ -546,7 +546,7 @@ const KnowledgeGraphVisualization = ({
 
   const getNodeTypeStats = () => {
     if (!graphData?.nodes) return {};
-    
+
     const stats = {};
     graphData.nodes.forEach(node => {
       const color = node.color;
@@ -555,7 +555,7 @@ const KnowledgeGraphVisualization = ({
       }
       stats[color].count++;
     });
-    
+
     return stats;
   };
 
@@ -667,8 +667,8 @@ const KnowledgeGraphVisualization = ({
           {Object.entries(nodeStats).map(([color, data]) => (
             <div key={color} className="flex items-center justify-between text-xs">
               <div className="flex items-center">
-                <div 
-                  className="w-3 h-3 rounded-full mr-2" 
+                <div
+                  className="w-3 h-3 rounded-full mr-2"
                   style={{ backgroundColor: color }}
                 />
                 <span>{data.label}</span>
@@ -695,8 +695,8 @@ const KnowledgeGraphVisualization = ({
       )}
 
       {/* Sigma Container */}
-      <div 
-        ref={containerRef} 
+      <div
+        ref={containerRef}
         className="w-full h-full bg-gradient-to-br from-slate-50 to-gray-100 border border-gray-200 rounded-lg"
         style={{ minHeight: '400px' }}
       />
@@ -704,4 +704,4 @@ const KnowledgeGraphVisualization = ({
   );
 };
 
-export default KnowledgeGraphVisualization; 
+export default KnowledgeGraphVisualization;

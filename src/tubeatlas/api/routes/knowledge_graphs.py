@@ -1,7 +1,8 @@
 """Knowledge graph API routes."""
 
+from typing import Any, Dict
+
 from fastapi import APIRouter, HTTPException, status
-from typing import Dict, Any
 
 router = APIRouter(prefix="/api/v1/kg", tags=["knowledge_graphs"])
 
@@ -12,7 +13,7 @@ async def generate_video_kg(video_id: str) -> Dict[str, Any]:
     # TODO: Implement video KG generation
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Video knowledge graph generation not yet implemented"
+        detail="Video knowledge graph generation not yet implemented",
     )
 
 
@@ -22,7 +23,7 @@ async def generate_channel_kg(channel_id: str) -> Dict[str, Any]:
     # TODO: Implement channel KG generation
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Channel knowledge graph generation not yet implemented"
+        detail="Channel knowledge graph generation not yet implemented",
     )
 
 
@@ -32,7 +33,7 @@ async def get_knowledge_graph(kg_id: str) -> Dict[str, Any]:
     # TODO: Implement KG retrieval
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Knowledge graph retrieval not yet implemented"
+        detail="Knowledge graph retrieval not yet implemented",
     )
 
 
@@ -42,7 +43,7 @@ async def visualize_knowledge_graph(kg_id: str) -> Dict[str, Any]:
     # TODO: Implement KG visualization
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Knowledge graph visualization not yet implemented"
+        detail="Knowledge graph visualization not yet implemented",
     )
 
 
@@ -52,5 +53,5 @@ async def delete_knowledge_graph(kg_id: str) -> Dict[str, Any]:
     # TODO: Implement KG deletion
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Knowledge graph deletion not yet implemented"
-    ) 
+        detail="Knowledge graph deletion not yet implemented",
+    )

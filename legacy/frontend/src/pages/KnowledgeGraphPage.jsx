@@ -24,10 +24,10 @@ const KnowledgeGraphPage = () => {
     console.log(`=== Loading KG: dataset=${dataset}, useMock=${useMock} ===`);
     setLoading(true);
     setError(null);
-    
+
     try {
       let rawData;
-      
+
       if (useMock) {
         console.log('Using mock data for testing');
         rawData = KGService.generateMockData();
@@ -45,28 +45,28 @@ const KnowledgeGraphPage = () => {
           console.log('Data loaded from local file:', rawData);
         }
       }
-      
+
       if (!rawData || !rawData.triples || rawData.triples.length === 0) {
         throw new Error('No knowledge graph data found');
       }
-      
+
       console.log(`Loaded ${rawData.triples.length} triples`);
-      
+
       // Transform data for sigma.js
       const sigmaData = KGService.transformToSigmaFormat(rawData.triples);
       console.log(`Transformed to ${sigmaData.nodes.length} nodes and ${sigmaData.edges.length} edges`);
       console.log('Raw triples sample:', rawData.triples.slice(0, 3));
-      console.log('Sigma data sample:', { 
+      console.log('Sigma data sample:', {
         nodes: sigmaData.nodes.slice(0, 3),
         edges: sigmaData.edges.slice(0, 3)
       });
       console.log('All edges created:', sigmaData.edges.map(e => `${e.source} --[${e.label}]--> ${e.target}`));
-      
+
       setGraphData(sigmaData);
     } catch (err) {
       console.error('Error loading knowledge graph:', err);
       setError(err.message);
-      
+
       // If there's an error and we weren't using mock data, try mock data as fallback
       if (!useMock) {
         console.log('Attempting fallback to mock data...');
@@ -106,7 +106,7 @@ const KnowledgeGraphPage = () => {
 
   const handleDownload = () => {
     if (!graphData) return;
-    
+
     const dataStr = JSON.stringify(graphData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
@@ -122,7 +122,7 @@ const KnowledgeGraphPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white shadow-sm border-b"
@@ -136,7 +136,7 @@ const KnowledgeGraphPage = () => {
                 <p className="text-gray-600">Interactive visualization of extracted knowledge relationships</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {/* Dataset Selector */}
               <div className="flex items-center space-x-2">
@@ -177,7 +177,7 @@ const KnowledgeGraphPage = () => {
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-                
+
                 <button
                   onClick={handleDownload}
                   disabled={loading || !graphData}
@@ -204,7 +204,7 @@ const KnowledgeGraphPage = () => {
         )}
 
         {error && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="flex items-center justify-center h-full"
@@ -232,7 +232,7 @@ const KnowledgeGraphPage = () => {
         )}
 
         {!loading && !error && graphData && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="h-full"
@@ -288,7 +288,7 @@ const KnowledgeGraphPage = () => {
               ×
             </button>
           </div>
-          
+
           {selectedNode && (
             <div className="space-y-2 text-sm">
               <div><span className="font-medium">Label:</span> {selectedNode.label}</div>
@@ -296,14 +296,14 @@ const KnowledgeGraphPage = () => {
               <div><span className="font-medium">Position:</span> ({selectedNode.x?.toFixed(2)}, {selectedNode.y?.toFixed(2)})</div>
               <div className="flex items-center">
                 <span className="font-medium mr-2">Color:</span>
-                <div 
-                  className="w-4 h-4 rounded-full" 
+                <div
+                  className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: selectedNode.color }}
                 />
               </div>
             </div>
           )}
-          
+
           {selectedEdge && (
             <div className="space-y-2 text-sm">
               <div><span className="font-medium">Relationship:</span> {selectedEdge.label}</div>
@@ -317,4 +317,4 @@ const KnowledgeGraphPage = () => {
   );
 };
 
-export default KnowledgeGraphPage; 
+export default KnowledgeGraphPage;

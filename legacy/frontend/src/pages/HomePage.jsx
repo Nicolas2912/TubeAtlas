@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Youtube, 
-  Brain, 
-  BarChart3, 
-  Search, 
-  Network, 
+import {
+  Youtube,
+  Brain,
+  BarChart3,
+  Search,
+  Network,
   Zap,
   ArrowRight,
   Play,
@@ -77,14 +77,14 @@ const HomePage = () => {
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                 <span className="text-sm text-gray-600">Now with GPT-4 Integration</span>
               </div>
-              
+
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6">
                 Unlock the Power of
                 <span className="block gradient-text">YouTube Content</span>
               </h1>
-              
+
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                Transform YouTube channels into actionable insights with AI-powered analysis, 
+                Transform YouTube channels into actionable insights with AI-powered analysis,
                 knowledge graphs, and deep content understanding.
               </p>
             </motion.div>
@@ -103,7 +103,7 @@ const HomePage = () => {
                 <span>Start Analyzing</span>
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              
+
               <Link
                 to="/insights"
                 className="inline-flex items-center space-x-2 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-8 py-4 rounded-xl border border-gray-200 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -152,7 +152,7 @@ const HomePage = () => {
                 Everything you need to analyze YouTube content
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                From transcript extraction to knowledge graph generation, TubeAtlas provides 
+                From transcript extraction to knowledge graph generation, TubeAtlas provides
                 a complete toolkit for understanding video content at scale.
               </p>
             </motion.div>
@@ -199,7 +199,7 @@ const HomePage = () => {
               Ready to unlock insights from YouTube?
             </h2>
             <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of researchers, content creators, and analysts who use TubeAtlas 
+              Join thousands of researchers, content creators, and analysts who use TubeAtlas
               to understand video content like never before.
             </p>
             <Link
@@ -217,4 +217,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;

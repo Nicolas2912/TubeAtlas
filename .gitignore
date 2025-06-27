@@ -93,6 +93,12 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# pytest
+.pytest_cache/
+
+# tox
+.tox/
+
 # Pyre type checker
 .pyre/
 
@@ -139,4 +145,4 @@ credentials/
 # Task files (Taskmaster)
 # Uncomment if you don't want to track tasks
 # .taskmaster/tasks/
-# .taskmaster/reports/ 
+# .taskmaster/reports/

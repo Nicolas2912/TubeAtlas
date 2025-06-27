@@ -1,12 +1,12 @@
 <html>
     <head>
         <meta charset="utf-8">
-        
+
             <script src="lib/bindings/utils.js"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-        
+
+
 <center>
 <h1></h1>
 </center>
@@ -40,32 +40,32 @@
                  float: left;
              }
 
-             
 
-             
+
+
              #config {
                  float: left;
                  width: 400px;
                  height: 600px;
              }
-             
 
-             
+
+
         </style>
     </head>
 
 
     <body>
         <div class="card" style="width: 100%">
-            
-            
+
+
             <div id="mynetwork" class="card-body"></div>
         </div>
 
-        
-        
+
+
             <div id="config"></div>
-        
+
 
         <script type="text/javascript">
 
@@ -85,15 +85,15 @@
                   value : []
               };
 
-              
 
-              
+
+
 
               // This method is responsible for drawing the graph, returns the drawn network
               function drawGraph() {
                   var container = document.getElementById('mynetwork');
 
-                  
+
 
                   // parsing and collecting nodes and edges from the python
                   nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Chatgpt", "label": "Chatgpt", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Openai", "label": "Openai", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "2022", "label": "2022", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gemini", "label": "Gemini", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Google", "label": "Google", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Co-Pilot", "label": "Co-Pilot", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Microsoft", "label": "Microsoft", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Claude", "label": "Claude", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Anthropic", "label": "Anthropic", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gro", "label": "Gro", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Xai", "label": "Xai", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Lchat", "label": "Lchat", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "French Company", "label": "French Company", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Deepseek", "label": "Deepseek", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Reinforcement Learning Paper By Deepseek", "label": "Reinforcement Learning Paper By Deepseek", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chatbot Arena", "label": "Chatbot Arena", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Large Language Models", "label": "Large Language Models", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Scale Leaderboard", "label": "Scale Leaderboard", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tik Tokenizer", "label": "Tik Tokenizer", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Token Sequence", "label": "Token Sequence", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Token", "label": "Token", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pre-Training", "label": "Pre-Training", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Post-Training", "label": "Post-Training", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Neural Network", "label": "Neural Network", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Parameters", "label": "Parameters", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Reinforcement Learning", "label": "Reinforcement Learning", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Thinking Models", "label": "Thinking Models", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mathematics", "label": "Mathematics", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Coding", "label": "Coding", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Programming", "label": "Programming", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Internet Search Tool", "label": "Internet Search Tool", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Advanced Data Analysis", "label": "Advanced Data Analysis", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Claude 3.7", "label": "Claude 3.7", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Arc Institute", "label": "Arc Institute", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Evo 2", "label": "Evo 2", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cursor", "label": "Cursor", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Multimodality", "label": "Multimodality", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Speech To Text", "label": "Speech To Text", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Text To Speech", "label": "Text To Speech", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Advanced Voice Mode", "label": "Advanced Voice Mode", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Grock", "label": "Grock", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Notebooklm", "label": "Notebooklm", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Language Learning", "label": "Language Learning", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Podcast Generation", "label": "Podcast Generation", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Image Tokens", "label": "Image Tokens", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dall\u00b7E 3", "label": "Dall\u00b7E 3", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ideogram", "label": "Ideogram", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Image Generation", "label": "Image Generation", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Video Generation Models", "label": "Video Generation Models", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chatgpt Memory Feature", "label": "Chatgpt Memory Feature", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Custom Instructions", "label": "Custom Instructions", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Custom Gpts", "label": "Custom Gpts", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Translation", "label": "Translation", "shape": "dot"}]);
@@ -141,25 +141,25 @@
     }
 };
 
-                  
 
 
-                  
+
+
                   // if this network requires displaying the configure window,
                   // put it in its div
                   options.configure["container"] = document.getElementById("config");
-                  
+
 
                   network = new vis.Network(container, data, options);
 
-                  
-
-                  
-
-                  
 
 
-                  
+
+
+
+
+
+
 
                   return network;
 

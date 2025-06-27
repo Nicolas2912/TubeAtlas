@@ -17,21 +17,21 @@ import pyperclip
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
 # --- Adjust Pandas Display Options ---
-pd.set_option('display.width', 1000)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', 100)  # Limit number of rows displayed
-pd.set_option('display.max_colwidth', 100)  # Limit column width
+pd.set_option("display.width", 1000)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.max_rows", 100)  # Limit number of rows displayed
+pd.set_option("display.max_colwidth", 100)  # Limit column width
 
 # Predefined queries - modify these to add your own queries
 QUERIES = {
-    'all_videos': """
-        SELECT 
+    "all_videos": """
+        SELECT
             video_id,
             title,
             publish_date,
@@ -42,9 +42,8 @@ QUERIES = {
         FROM transcripts
         ORDER BY publish_date DESC
     """,
-    
-    'video_stats': """
-        SELECT 
+    "video_stats": """
+        SELECT
             COUNT(*) as total_videos,
             SUM(CASE WHEN transcript_text IS NULL OR transcript_text = '' THEN 0 ELSE 1 END) as videos_with_transcripts,
             ROUND(SUM(CASE WHEN transcript_text IS NULL OR transcript_text = '' THEN 0 ELSE 1 END) * 100.0 / COUNT(*), 1) as transcript_coverage_percent,
@@ -55,9 +54,8 @@ QUERIES = {
             COUNT(DISTINCT category_name) as unique_categories
         FROM transcripts
     """,
-    
-    'category_stats': """
-        SELECT 
+    "category_stats": """
+        SELECT
             category_name,
             COUNT(*) as video_count,
             AVG(length_seconds) as avg_duration_seconds,
@@ -66,9 +64,8 @@ QUERIES = {
         GROUP BY category_name
         ORDER BY video_count DESC
     """,
-    
-    'longest_videos': """
-        SELECT 
+    "longest_videos": """
+        SELECT
             video_id,
             title,
             publish_date,
@@ -78,9 +75,8 @@ QUERIES = {
         ORDER BY length_seconds DESC
         LIMIT 10
     """,
-    
-    'recent_videos': """
-        SELECT 
+    "recent_videos": """
+        SELECT
             video_id,
             title,
             publish_date,
@@ -90,15 +86,13 @@ QUERIES = {
         ORDER BY publish_date DESC
         LIMIT 10
     """,
-
-    'openai_tokens': """
-        SELECT 
+    "openai_tokens": """
+        SELECT
             SUM(openai_tokens) as total_openai_tokens
         FROM transcripts
     """,
-    
-    'video_transcript': """
-        SELECT 
+    "video_transcript": """
+        SELECT
             video_id,
             title,
             publish_date,
@@ -109,79 +103,96 @@ QUERIES = {
             openai_tokens
         FROM transcripts
         WHERE video_id = '7xTGNNLPyMI'
-    """
+    """,
 }
+
 
 def get_db_path(channel_name: str) -> Path:
     """
     Get the database path for a channel.
-    
+
     Args:
         channel_name: Name of the channel (without .db extension)
-        
+
     Returns:
         Path object for the database file
     """
     data_dir = Path(__file__).parent.parent / "data"
     return data_dir / f"{channel_name}.db"
 
+
 def check_database(db_path: Path) -> tuple[bool, Optional[str]]:
     """
     Check if database exists and has the required table.
-    
+
     Args:
         db_path: Path to the database file
-        
+
     Returns:
         Tuple of (is_valid, error_message)
     """
     if not db_path.exists():
         return False, f"Database file not found: {db_path}"
-        
+
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Check if transcripts table exists
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
+        cursor.execute(
+            """
+            SELECT name FROM sqlite_master
             WHERE type='table' AND name='transcripts'
-        """)
-        
+        """
+        )
+
         if not cursor.fetchone():
-            return False, f"Database exists but 'transcripts' table not found in {db_path}"
-            
+            return (
+                False,
+                f"Database exists but 'transcripts' table not found in {db_path}",
+            )
+
         # Check table structure
         cursor.execute("PRAGMA table_info(transcripts)")
         columns = {row[1] for row in cursor.fetchall()}
         required_columns = {
-            'video_id', 'title', 'publish_date', 'length_seconds',
-            'description', 'tags', 'category_name', 'transcript_text'
+            "video_id",
+            "title",
+            "publish_date",
+            "length_seconds",
+            "description",
+            "tags",
+            "category_name",
+            "transcript_text",
         }
-        
+
         missing_columns = required_columns - columns
         if missing_columns:
-            return False, f"Database table is missing required columns: {missing_columns}"
-            
+            return (
+                False,
+                f"Database table is missing required columns: {missing_columns}",
+            )
+
         return True, None
-        
+
     except sqlite3.Error as e:
         return False, f"Database error: {e}"
     finally:
-        if 'conn' in locals():
+        if "conn" in locals():
             conn.close()
+
 
 def query_transcript_db(db_path: Path, query: str) -> pd.DataFrame:
     """
     Execute a query on the transcript database.
-    
+
     Args:
         db_path: Path to the database file
         query: SQL query to execute
-        
+
     Returns:
         DataFrame containing query results
-        
+
     Raises:
         ValueError: If database is invalid or query fails
     """
@@ -189,7 +200,7 @@ def query_transcript_db(db_path: Path, query: str) -> pd.DataFrame:
     is_valid, error_msg = check_database(db_path)
     if not is_valid:
         raise ValueError(error_msg)
-        
+
     conn = None
     try:
         conn = sqlite3.connect(db_path)
@@ -203,10 +214,11 @@ def query_transcript_db(db_path: Path, query: str) -> pd.DataFrame:
         if conn:
             conn.close()
 
+
 def list_available_databases() -> Dict[str, bool]:
     """
     List all available transcript databases.
-    
+
     Returns:
         Dictionary mapping database names to their validity status
     """
@@ -214,12 +226,12 @@ def list_available_databases() -> Dict[str, bool]:
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return {}
-        
+
     dbs = list(data_dir.glob("*.db"))
     if not dbs:
         logger.error("No database files found in data directory")
         return {}
-        
+
     logger.info("Available databases:")
     db_status = {}
     for db in sorted(dbs):
@@ -229,39 +241,40 @@ def list_available_databases() -> Dict[str, bool]:
         if not is_valid:
             logger.error(f"  Error: {error_msg}")
         db_status[db.stem] = is_valid
-    
+
     return db_status
+
 
 def get_video_transcript(channel_name: str, video_id: str) -> None:
     """
     Get the transcript for a specific video ID.
-    
+
     Args:
         channel_name: Name of the channel (without .db extension)
         video_id: YouTube video ID to get transcript for
     """
     db_path = get_db_path(channel_name)
-    
+
     try:
         # First check if database exists and is valid
         is_valid, error_msg = check_database(db_path)
         if not is_valid:
             logger.error(error_msg)
             return
-            
+
         logger.info(f"\nGetting transcript for video ID: {video_id}")
         logger.info("=" * 80)
-        
+
         # Create the query for the specific video
         query = f"""
-            SELECT 
+            SELECT
                 title,
                 transcript_text,
                 openai_tokens
             FROM transcripts
             WHERE video_id = '{video_id}'
         """
-        
+
         df = query_transcript_db(db_path, query)
         if df.empty:
             logger.info(f"No video found with ID: {video_id}")
@@ -269,83 +282,88 @@ def get_video_transcript(channel_name: str, video_id: str) -> None:
             video_info = df.iloc[0]
             print(f"\nVideo Information:")
             print(f"Title: {video_info['title']}")
-            print("\n" + "="*80)
+            print("\n" + "=" * 80)
             print("TRANSCRIPT:")
-            print("="*80)
-            if video_info['transcript_text']:
-                transcript_text = video_info['transcript_text']
+            print("=" * 80)
+            if video_info["transcript_text"]:
+                transcript_text = video_info["transcript_text"]
                 print(transcript_text)
-                
+
                 # Copy transcript to clipboard
                 try:
                     pyperclip.copy(transcript_text)
-                    print("\n" + "="*80)
+                    print("\n" + "=" * 80)
                     print("✓ TRANSCRIPT COPIED TO CLIPBOARD (Zwischenablage)!")
-                    print("="*80)
+                    print("=" * 80)
                 except Exception as clipboard_error:
-                    print(f"\n⚠ Warning: Could not copy to clipboard: {clipboard_error}")
+                    print(
+                        f"\n⚠ Warning: Could not copy to clipboard: {clipboard_error}"
+                    )
             else:
                 print("No transcript available for this video.")
             print(f"OpenAI Tokens: {video_info['openai_tokens']}")
-                
+
     except Exception as e:
         logger.error(f"Error getting transcript: {e}")
+
 
 def run_queries(channel_name: str) -> None:
     """
     Run all predefined queries for a channel.
-    
+
     Args:
         channel_name: Name of the channel (without .db extension)
     """
     db_path = get_db_path(channel_name)
-    
+
     try:
         # First check if database exists and is valid
         is_valid, error_msg = check_database(db_path)
         if not is_valid:
             logger.error(error_msg)
             return
-            
+
         logger.info(f"\nRunning queries for channel: {channel_name}")
         logger.info("=" * 80)
-        
+
         # Run each query
         for query_name, query in QUERIES.items():
-            if query_name == 'all_videos':
+            if query_name == "all_videos":
                 logger.info(f"\nQuery: {query_name}")
                 logger.info("-" * 40)
-                
+
                 df = query_transcript_db(db_path, query)
                 if df.empty:
                     logger.info("No results found")
                 else:
                     print(f"\nResults ({len(df)} rows):")
                     print(df)
-                
+
     except Exception as e:
         logger.error(f"Error running queries: {e}")
+
 
 def main():
     """Main entry point."""
     # List available databases
     db_status = list_available_databases()
-    
+
     if not db_status:
         logger.error("No valid databases found. Please run the download script first.")
         return
-    
+
     # Check if AndrejKarpathy database exists and get the specific video transcript
-    if 'AndrejKarpathy' in db_status and db_status['AndrejKarpathy']:
+    if "AndrejKarpathy" in db_status and db_status["AndrejKarpathy"]:
         logger.info("\nGetting transcript for AndrejKarpathy video 7xTGNNLPyMI...")
-        get_video_transcript('AndrejKarpathy', '7xTGNNLPyMI')
+        get_video_transcript("AndrejKarpathy", "7xTGNNLPyMI")
     else:
         logger.error("AndrejKarpathy database not found or invalid.")
-        
+
     # Run queries for each valid database
     # for channel_name, is_valid in db_status.items():
     #     if is_valid:
     #         run_queries(channel_name)
+
 
 if __name__ == "__main__":
     main()

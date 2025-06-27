@@ -1,7 +1,8 @@
 """Transcript API routes."""
 
+from typing import Any, Dict
+
 from fastapi import APIRouter, HTTPException, status
-from typing import Dict, Any
 
 router = APIRouter(prefix="/api/v1/transcripts", tags=["transcripts"])
 
@@ -12,7 +13,7 @@ async def process_channel_transcripts(channel_data: Dict[str, Any]) -> Dict[str,
     # TODO: Implement channel transcript processing
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Channel transcript processing not yet implemented"
+        detail="Channel transcript processing not yet implemented",
     )
 
 
@@ -22,7 +23,7 @@ async def process_video_transcript(video_data: Dict[str, Any]) -> Dict[str, Any]
     # TODO: Implement video transcript processing
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Video transcript processing not yet implemented"
+        detail="Video transcript processing not yet implemented",
     )
 
 
@@ -32,7 +33,7 @@ async def get_transcript(video_id: str) -> Dict[str, Any]:
     # TODO: Implement transcript retrieval
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Transcript retrieval not yet implemented"
+        detail="Transcript retrieval not yet implemented",
     )
 
 
@@ -42,7 +43,7 @@ async def get_channel_transcripts(channel_id: str) -> Dict[str, Any]:
     # TODO: Implement channel transcript retrieval
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Channel transcript retrieval not yet implemented"
+        detail="Channel transcript retrieval not yet implemented",
     )
 
 
@@ -52,5 +53,5 @@ async def delete_transcript(video_id: str) -> Dict[str, Any]:
     # TODO: Implement transcript deletion
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Transcript deletion not yet implemented"
-    ) 
+        detail="Transcript deletion not yet implemented",
+    )

@@ -47,7 +47,7 @@ A lightweight FastAPI server specifically designed to **serve pre-generated know
 ```python
 DATASET_FILES = {
     "bryanjohnson": "complete_kg_langchain_bryanjohnson.json",
-    "andreykarpathy": "complete_kg_langchain_AndrejKarpathy.json", 
+    "andreykarpathy": "complete_kg_langchain_AndrejKarpathy.json",
     "example": "example_kg_langchain.json"
 }
 ```
@@ -259,4 +259,4 @@ Could integrate with `tubeatlas/api.py` for:
 | **Data Flow** | Consumer | Producer |
 | **Deployment** | Production-ready serving | Research and processing |
 
-Both APIs work together to provide a complete pipeline from YouTube content to interactive knowledge graph visualizations, with clear separation of concerns between data processing and data serving. 
+Both APIs work together to provide a complete pipeline from YouTube content to interactive knowledge graph visualizations, with clear separation of concerns between data processing and data serving.

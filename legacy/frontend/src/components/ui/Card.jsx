@@ -1,24 +1,24 @@
 import { motion } from 'framer-motion';
 
-const Card = ({ 
-  children, 
-  className = '', 
-  animate = false, 
+const Card = ({
+  children,
+  className = '',
+  animate = false,
   hover = false,
   padding = 'default',
-  ...props 
+  ...props
 }) => {
   const baseStyles = 'bg-white rounded-xl border border-gray-200';
-  
+
   const paddingStyles = {
     none: '',
     sm: 'p-4',
     default: 'p-6',
     lg: 'p-8'
   };
-  
+
   const hoverStyles = hover ? 'hover:shadow-lg hover:-translate-y-1 cursor-pointer' : 'shadow-lg';
-  
+
   const cardClasses = `
     ${baseStyles}
     ${paddingStyles[padding]}
@@ -48,4 +48,4 @@ const Card = ({
   );
 };
 
-export default Card; 
+export default Card;

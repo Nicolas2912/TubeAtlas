@@ -30,4 +30,4 @@ This project uses Poetry for dependency management and packaging.
 
 ## License
 
-TBD 
+TBD

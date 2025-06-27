@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 
-const LoadingSpinner = ({ 
-  size = 'md', 
-  color = 'primary', 
+const LoadingSpinner = ({
+  size = 'md',
+  color = 'primary',
   className = '',
   text = null
 }) => {
@@ -12,7 +12,7 @@ const LoadingSpinner = ({
     lg: 'w-8 h-8',
     xl: 'w-12 h-12'
   };
-  
+
   const colors = {
     primary: 'border-primary-600',
     white: 'border-white',
@@ -42,4 +42,4 @@ const LoadingSpinner = ({
   );
 };
 
-export default LoadingSpinner; 
+export default LoadingSpinner;

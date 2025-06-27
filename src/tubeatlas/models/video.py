@@ -1,19 +1,19 @@
 """Video metadata models."""
 
 from datetime import datetime
-from typing import List, Optional
 
-from sqlalchemy import Column, String, Integer, DateTime, Text, JSON
+from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative.api import DeclarativeMeta
 
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 
 class Video(Base):
     """Video metadata model."""
-    
+
     __tablename__ = "videos"
-    
+
     id = Column(String, primary_key=True)
     channel_id = Column(String, nullable=False)
     title = Column(String, nullable=False)
@@ -30,6 +30,7 @@ class Video(Base):
     thumbnail_url = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def __repr__(self) -> str:
-        return f"<Video(id='{self.id}', title='{self.title[:50]}...')>" 
+        """String representation of Video model."""
+        return f"<Video(id='{self.id}', title='{self.title[:50]}...')>"

@@ -28,4 +28,4 @@ def count_tokens_all_models(text: str) -> Dict[str, int]:
         "openai_gpt35": count_openai_tokens(text, "gpt-3.5-turbo"),
         "openai_gpt4": count_openai_tokens(text, "gpt-4"),
         "gemini_pro": count_gemini_tokens(text, "gemini-pro"),
-    } 
+    }

@@ -1,6 +1,7 @@
 """API dependency injection."""
 
 from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import AsyncSessionLocal
@@ -12,4 +13,4 @@ async def get_database() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
-            await session.close() 
+            await session.close()

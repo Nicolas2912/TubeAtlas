@@ -1,12 +1,12 @@
 <html>
     <head>
         <meta charset="utf-8">
-        
+
             <script src="lib/bindings/utils.js"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-            
-        
+
+
 <center>
 <h1></h1>
 </center>
@@ -40,32 +40,32 @@
                  float: left;
              }
 
-             
 
-             
+
+
              #config {
                  float: left;
                  width: 400px;
                  height: 600px;
              }
-             
 
-             
+
+
         </style>
     </head>
 
 
     <body>
         <div class="card" style="width: 100%">
-            
-            
+
+
             <div id="mynetwork" class="card-body"></div>
         </div>
 
-        
-        
+
+
             <div id="config"></div>
-        
+
 
         <script type="text/javascript">
 
@@ -85,15 +85,15 @@
                   value : []
               };
 
-              
 
-              
+
+
 
               // This method is responsible for drawing the graph, returns the drawn network
               function drawGraph() {
                   var container = document.getElementById('mynetwork');
 
-                  
+
 
                   // parsing and collecting nodes and edges from the python
                   nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Biomarkers", "label": "Biomarkers", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Health", "label": "Sperm Health", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Quality Metrics", "label": "Sperm Quality Metrics", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Count", "label": "Sperm Count", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Motility", "label": "Sperm Motility", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Morphology", "label": "Sperm Morphology", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dna Fragmentation", "label": "Dna Fragmentation", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Inflammation", "label": "Inflammation", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Reactive Oxygen Species", "label": "Reactive Oxygen Species", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mitochondria Function", "label": "Mitochondria Function", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cardiovascular Disease Risk", "label": "Cardiovascular Disease Risk", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hormones", "label": "Hormones", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Follicle Stimulating Hormone", "label": "Follicle Stimulating Hormone", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Luteinizing Hormone", "label": "Luteinizing Hormone", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Testosterone", "label": "Testosterone", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Biological Age", "label": "Biological Age", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bone Mineral Density", "label": "Bone Mineral Density", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Toxins", "label": "Toxins", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Phthalates", "label": "Phthalates", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bpa", "label": "Bpa", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pos", "label": "Pos", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Oxidative Stress", "label": "Oxidative Stress", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Obesity", "label": "Obesity", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Insulin Resistance", "label": "Insulin Resistance", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sperm Production", "label": "Sperm Production", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sleep", "label": "Sleep", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Smoking", "label": "Smoking", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alcohol", "label": "Alcohol", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Metabolic Health", "label": "Metabolic Health", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Exercise", "label": "Exercise", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Diet", "label": "Diet", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Stress", "label": "Stress", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Testicular Cooling", "label": "Testicular Cooling", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sauna Protocol", "label": "Sauna Protocol", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Biomarker Measurement", "label": "Biomarker Measurement", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Epigenetic Marker", "label": "Epigenetic Marker", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dna Methylation", "label": "Dna Methylation", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Telomere Length", "label": "Telomere Length", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Inflammation Markers", "label": "Inflammation Markers", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "High Sensitivity Crp", "label": "High Sensitivity Crp", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tnf Alpha", "label": "Tnf Alpha", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Il6", "label": "Il6", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hormone Health", "label": "Hormone Health", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sleep Health", "label": "Sleep Health", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Randomized Control Trial", "label": "Randomized Control Trial", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Scientific Evidence", "label": "Scientific Evidence", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "N Of One Study", "label": "N Of One Study", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Biological Age Measurement", "label": "Biological Age Measurement", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Oral Health", "label": "Oral Health", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Attachment Loss", "label": "Attachment Loss", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pocket Depth", "label": "Pocket Depth", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Prp Therapy", "label": "Prp Therapy", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Growth Factors", "label": "Growth Factors", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Endogane", "label": "Endogane", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Superglue For Gums", "label": "Superglue For Gums", "shape": "dot"}]);
@@ -141,25 +141,25 @@
     }
 };
 
-                  
 
 
-                  
+
+
                   // if this network requires displaying the configure window,
                   // put it in its div
                   options.configure["container"] = document.getElementById("config");
-                  
+
 
                   network = new vis.Network(container, data, options);
 
-                  
-
-                  
-
-                  
 
 
-                  
+
+
+
+
+
+
 
                   return network;
 

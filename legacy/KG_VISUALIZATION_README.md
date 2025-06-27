@@ -243,7 +243,7 @@ python -m tubeatlas.kg_builder_langchain
    ```python
    # Async version with concurrency control
    graph_data = await builder.build_complete_knowledge_graph_async(
-       batch_size=10, 
+       batch_size=10,
        max_concurrent=3
    )
    ```
@@ -266,4 +266,4 @@ To contribute to the knowledge graph visualization system:
 
 ## 📄 License
 
-This project is part of TubeAtlas and follows the same license terms. 
+This project is part of TubeAtlas and follows the same license terms.

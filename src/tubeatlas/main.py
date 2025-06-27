@@ -1,12 +1,11 @@
 """Main FastAPI application entrypoint."""
 
-import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .api.routes import chat, knowledge_graphs, transcripts
 from .config.settings import settings
-from .api.routes import transcripts, knowledge_graphs, chat
 
 # Load environment variables
 load_dotenv()
@@ -17,7 +16,7 @@ app = FastAPI(
     version=settings.app_version,
     description="Advanced YouTube Knowledge Graph & RAG Platform",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Add CORS middleware
@@ -41,7 +40,7 @@ async def root():
     return {
         "message": f"Welcome to {settings.app_name} v{settings.app_version}",
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
     }
 
 
@@ -51,16 +50,17 @@ async def health_check():
     return {
         "status": "healthy",
         "version": settings.app_version,
-        "environment": "development" if settings.debug else "production"
+        "environment": "development" if settings.debug else "production",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "tubeatlas.main:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=settings.debug,
-        workers=1 if settings.debug else settings.api_workers
-    ) 
+        workers=1 if settings.debug else settings.api_workers,
+    )

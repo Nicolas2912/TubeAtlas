@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Youtube, 
-  Search, 
-  Play, 
-  Download, 
-  Brain, 
+import {
+  Youtube,
+  Search,
+  Play,
+  Download,
+  Brain,
   Network,
   AlertCircle,
   CheckCircle,
@@ -20,23 +20,23 @@ const AnalyzePage = () => {
   const [error, setError] = useState('');
 
   const steps = [
-    { 
-      title: 'Extract Transcripts', 
+    {
+      title: 'Extract Transcripts',
       description: 'Downloading video transcripts and metadata',
       icon: Download
     },
-    { 
-      title: 'Process Content', 
+    {
+      title: 'Process Content',
       description: 'Analyzing content with AI models',
       icon: Brain
     },
-    { 
-      title: 'Build Knowledge Graph', 
+    {
+      title: 'Build Knowledge Graph',
       description: 'Creating relationships and insights',
       icon: Network
     },
-    { 
-      title: 'Generate Insights', 
+    {
+      title: 'Generate Insights',
       description: 'Extracting key themes and patterns',
       icon: CheckCircle
     }
@@ -76,7 +76,7 @@ const AnalyzePage = () => {
       /^https?:\/\/(www\.)?youtube\.com\/c\/[\w-]+/,  // Custom URL
       /^https?:\/\/(www\.)?youtube\.com\/@[\w\d]+/  // Handle URL
     ];
-    
+
     return patterns.some(pattern => pattern.test(url.trim()));
   };
 
@@ -94,7 +94,7 @@ const AnalyzePage = () => {
             Analyze YouTube Channel
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Enter a YouTube channel URL or handle to extract transcripts, build knowledge graphs, 
+            Enter a YouTube channel URL or handle to extract transcripts, build knowledge graphs,
             and generate deep insights from the content.
           </p>
         </motion.div>
@@ -167,14 +167,14 @@ const AnalyzePage = () => {
                 const Icon = step.icon;
                 const isActive = index === currentStep;
                 const isCompleted = index < currentStep;
-                
+
                 return (
                   <div key={step.title} className="flex items-center space-x-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      isCompleted 
-                        ? 'bg-green-100 text-green-600' 
-                        : isActive 
-                        ? 'bg-primary-100 text-primary-600' 
+                      isCompleted
+                        ? 'bg-green-100 text-green-600'
+                        : isActive
+                        ? 'bg-primary-100 text-primary-600'
                         : 'bg-gray-100 text-gray-400'
                     }`}>
                       {isCompleted ? (
@@ -260,4 +260,4 @@ const AnalyzePage = () => {
   );
 };
 
-export default AnalyzePage; 
+export default AnalyzePage;

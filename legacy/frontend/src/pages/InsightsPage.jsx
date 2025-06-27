@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Brain, 
-  Network, 
-  Download, 
-  Share2, 
+import {
+  Brain,
+  Network,
+  Download,
+  Share2,
   Search,
   Filter,
   BarChart3,
@@ -125,10 +125,10 @@ const InsightsPage = () => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Channel Overview</h3>
         <div className="prose max-w-none">
           <p className="text-gray-600 leading-relaxed">
-            Bryan Johnson's content focuses heavily on longevity research and biohacking practices. 
-            The channel demonstrates a strong emphasis on data-driven health optimization, with recurring 
-            themes around sleep quality, biomarker tracking, and anti-aging protocols. Content analysis 
-            reveals a systematic approach to health with heavy reliance on scientific research and 
+            Bryan Johnson's content focuses heavily on longevity research and biohacking practices.
+            The channel demonstrates a strong emphasis on data-driven health optimization, with recurring
+            themes around sleep quality, biomarker tracking, and anti-aging protocols. Content analysis
+            reveals a systematic approach to health with heavy reliance on scientific research and
             personal experimentation.
           </p>
         </div>
@@ -149,9 +149,9 @@ const InsightsPage = () => {
             <h3 className="text-lg font-semibold text-gray-900">{insight.title}</h3>
             <div className="flex items-center space-x-2">
               <span className={`px-2 py-1 rounded text-xs font-medium ${
-                insight.confidence > 0.9 
-                  ? 'bg-green-100 text-green-800' 
-                  : insight.confidence > 0.8 
+                insight.confidence > 0.9
+                  ? 'bg-green-100 text-green-800'
+                  : insight.confidence > 0.8
                   ? 'bg-yellow-100 text-yellow-800'
                   : 'bg-gray-100 text-gray-800'
               }`}>
@@ -159,9 +159,9 @@ const InsightsPage = () => {
               </span>
             </div>
           </div>
-          
+
           <p className="text-gray-600 mb-4">{insight.description}</p>
-          
+
           <div className="flex items-center space-x-6 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
               <MessageSquare className="w-4 h-4" />
@@ -282,7 +282,7 @@ const InsightsPage = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Channel Insights</h1>
-          
+
           {/* Channel Selector */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex items-center space-x-4">
@@ -298,7 +298,7 @@ const InsightsPage = () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <button className="btn-secondary">
                 <Share2 className="w-4 h-4 mr-2" />
@@ -349,4 +349,4 @@ const InsightsPage = () => {
   );
 };
 
-export default InsightsPage; 
+export default InsightsPage;
