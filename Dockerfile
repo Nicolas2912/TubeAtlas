@@ -1,7 +1,7 @@
 # =============================================================================
 # Builder Stage - Install dependencies
 # =============================================================================
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 
 # Set environment variables for Python
 ENV PYTHONUNBUFFERED=1 \
@@ -27,9 +27,8 @@ COPY pyproject.toml poetry.lock ./
 # Configure Poetry: Don't create virtual env since we're in a container
 RUN poetry config virtualenvs.create false
 
-# Export dependencies to requirements.txt and install them
-RUN poetry export --without-hashes --no-dev -f requirements.txt -o /tmp/requirements.txt && \
-    pip install --no-cache-dir --user -r /tmp/requirements.txt
+# Install dependencies directly with Poetry
+RUN poetry install --only=main --no-interaction --no-ansi --no-root
 
 # Copy source code
 COPY src/ ./src/
@@ -37,12 +36,12 @@ COPY src/ ./src/
 # =============================================================================
 # Runtime Stage - Minimal runtime environment
 # =============================================================================
-FROM python:3.11-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/home/appuser/.local/bin:$PATH" \
+    PATH="/usr/local/bin:$PATH" \
     PYTHONPATH="/app/src"
 
 # Install runtime dependencies only
@@ -58,7 +57,7 @@ RUN groupadd -g 1001 appuser && \
     chown -R appuser:appuser /home/appuser
 
 # Copy installed packages from builder stage
-COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+COPY --from=builder --chown=appuser:appuser /usr/local /usr/local
 
 # Set work directory and copy source code
 WORKDIR /app

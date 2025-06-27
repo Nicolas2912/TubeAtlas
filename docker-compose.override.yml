@@ -19,8 +19,8 @@ services:
       disable: true
 
   celery-worker:
-    # Enable auto-reload for celery worker in development
-    command: celery -A tubeatlas.celery_app worker --loglevel=debug --reload
+    # Enable debug logging for celery worker in development
+    command: celery -A tubeatlas.celery_app worker --loglevel=debug
     volumes:
       # Mount source code for live reload
       - ./src:/app/src
@@ -29,9 +29,11 @@ services:
     environment:
       - DEBUG=true
       - LOG_LEVEL=debug
-    # Remove healthcheck for faster development iteration
+    # Remove healthcheck and dependency for faster development iteration
     healthcheck:
       disable: true
+    depends_on:
+      - redis
 
   flower:
     # Always include flower in development
