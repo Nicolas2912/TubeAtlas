@@ -185,8 +185,8 @@
             "dependencies": [
               3
             ],
-            "details": "• Import token_counter.count_tokens(text).\n• For each segment and full transcript compute counts.\n• Add fields token_count, segment_tokens to transcript dict.",
-            "status": "pending",
+            "details": "• Import token_counter.count_tokens(text).\n• For each segment and full transcript compute counts.\n• Add fields token_count, segment_tokens to transcript dict.\n<info added on 2025-06-27T17:34:51.012Z>\n• Implemented `src/tubeatlas/utils/token_counter.py` with a `count_tokens` helper powered by the `tiktoken` library.  \n• Refactored `TranscriptService.get_transcript` to invoke `count_tokens`, adding `token_count` to each `TranscriptSegment` and `total_token_count` to the full `Transcript`.  \n• Extended `Transcript` and `TranscriptSegment` `TypedDict`s to include the new token-count fields.  \n• Added unit tests for `token_counter` and updated `TranscriptService` tests to assert correct token counts; all tests pass.\n</info added on 2025-06-27T17:34:51.012Z>",
+            "status": "done",
             "testStrategy": "Stub token_counter; verify counts stored."
           },
           {
@@ -344,7 +344,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T17:11:02.912Z",
+      "updated": "2025-06-27T17:34:55.305Z",
       "description": "Tasks for master context"
     }
   }

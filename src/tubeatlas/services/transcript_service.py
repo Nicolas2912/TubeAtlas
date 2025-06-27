@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional, TypedDict
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
 
+from src.tubeatlas.utils.token_counter import count_tokens as count_tokens_util
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,6 +17,7 @@ class TranscriptSegment(TypedDict):
     text: str
     start: float
     duration: float
+    token_count: int
 
 
 class Transcript(TypedDict):
@@ -25,6 +28,7 @@ class Transcript(TypedDict):
     language_code: Optional[str]
     is_generated: Optional[bool]
     segments: Optional[List[TranscriptSegment]]
+    total_token_count: Optional[int]
 
 
 class TranscriptService:
@@ -90,6 +94,7 @@ class TranscriptService:
                 "language_code": None,
                 "is_generated": None,
                 "segments": None,
+                "total_token_count": None,
             }
         except NoTranscriptFound:
             logger.warning(f"No transcript found for video: {video_id}")
@@ -99,6 +104,7 @@ class TranscriptService:
                 "language_code": None,
                 "is_generated": None,
                 "segments": None,
+                "total_token_count": None,
             }
 
         transcript = self._find_transcript(transcript_list, language_codes)
@@ -111,20 +117,33 @@ class TranscriptService:
                 "language_code": None,
                 "is_generated": None,
                 "segments": None,
+                "total_token_count": None,
             }
 
         try:
             fetched_segments = transcript.fetch()
-            segments: List[TranscriptSegment] = [
-                {"text": s["text"], "start": s["start"], "duration": s["duration"]}
-                for s in fetched_segments
-            ]
+
+            segments_with_tokens: List[TranscriptSegment] = []
+            total_tokens = 0
+
+            for s in fetched_segments:
+                token_count = count_tokens_util(s["text"])
+                segment: TranscriptSegment = {
+                    "text": s["text"],
+                    "start": s["start"],
+                    "duration": s["duration"],
+                    "token_count": token_count,
+                }
+                segments_with_tokens.append(segment)
+                total_tokens += token_count
+
             return {
                 "status": "success",
                 "video_id": video_id,
                 "language_code": transcript.language_code,
                 "is_generated": transcript.is_generated,
-                "segments": segments,
+                "segments": segments_with_tokens,
+                "total_token_count": total_tokens,
             }
         except Exception as e:
             logger.error(f"Failed to fetch transcript for video {video_id}: {e}")
@@ -134,6 +153,7 @@ class TranscriptService:
                 "language_code": None,
                 "is_generated": None,
                 "segments": None,
+                "total_token_count": None,
             }
 
     async def extract_transcript(
@@ -151,11 +171,10 @@ class TranscriptService:
             return " ".join(segment["text"] for segment in transcript_data["segments"])
         return None
 
-    async def count_tokens(self, text: str, model: str = "openai") -> int:
+    async def count_tokens(self, text: str, model: str = "gpt-4") -> int:
         """Count tokens in text for specified model."""
-        # TODO: Implement token counting
         logger.info(f"Counting tokens for model: {model}")
-        raise NotImplementedError("Token counting not yet implemented")
+        return count_tokens_util(text, model)
 
     async def process_channel_transcripts(self, channel_id: str) -> Dict[str, Any]:
         """Process transcripts for all videos in a channel."""

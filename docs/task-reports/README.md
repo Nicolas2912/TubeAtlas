@@ -41,6 +41,7 @@ Each task report provides:
 | 3.1 | Create YouTube API client with pagination & exponential back-off | ✅ COMPLETED | [task-3.1-youtube-api-client-pagination.md](./task-3.1-youtube-api-client-pagination.md) |
 | 3.2 | Implement fetch_channel_videos generator | ✅ COMPLETED | [task-3.2-fetch-channel-videos-generator.md](./task-3.2-fetch-channel-videos-generator.md) |
 | 3.3 | Develop TranscriptService to download transcripts with fallback logic | ✅ COMPLETED | [task-3.3-transcript-service.md](./task-3.3-transcript-service.md) |
+| 3.4 | Integrate token counting into TranscriptService | ✅ COMPLETED | [task-3.4-token-counting.md](./task-3.4-token-counting.md) |
 
 ### Maintenance & Fixes
 

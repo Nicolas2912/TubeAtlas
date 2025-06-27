@@ -14,8 +14,9 @@ def transcript_service():
 
 @pytest.mark.asyncio
 @patch("src.tubeatlas.services.transcript_service.YouTubeTranscriptApi")
+@patch("src.tubeatlas.services.transcript_service.count_tokens_util", return_value=1)
 async def test_get_transcript_success_preferred_language(
-    mock_api, transcript_service: TranscriptService
+    mock_count_tokens, mock_api, transcript_service: TranscriptService
 ):
     """Test successful transcript retrieval with a preferred language."""
     # Arrange
@@ -39,10 +40,14 @@ async def test_get_transcript_success_preferred_language(
     assert result["video_id"] == video_id
     assert result["language_code"] == "en"
     assert not result["is_generated"]
-    assert result["segments"] == [{"text": "Hello", "start": 0.0, "duration": 1.0}]
+    assert result["segments"] is not None
+    assert result["segments"] == [
+        {"text": "Hello", "start": 0.0, "duration": 1.0, "token_count": 1}
+    ]
     mock_api.list_transcripts.assert_called_once_with(video_id)
     mock_transcript_list.find_transcript.assert_called_once_with(["en"])
     mock_transcript.fetch.assert_called_once()
+    mock_count_tokens.assert_called_once_with("Hello")
 
 
 @pytest.mark.asyncio
@@ -255,3 +260,37 @@ async def test_extract_transcript_failure(transcript_service: TranscriptService)
         result = await transcript_service.extract_transcript(video_id)
         # Assert
         assert result is None
+
+
+@pytest.mark.asyncio
+@patch("src.tubeatlas.services.transcript_service.YouTubeTranscriptApi")
+@patch("src.tubeatlas.services.transcript_service.count_tokens_util", return_value=5)
+async def test_get_transcript_success_with_token_counts(
+    mock_count_tokens, mock_api, transcript_service: TranscriptService
+):
+    """Test successful transcript retrieval includes token counts."""
+    # Arrange
+    video_id = "test_video_id"
+    mock_transcript = MagicMock()
+    mock_transcript.language_code = "en"
+    mock_transcript.is_generated = False
+    mock_transcript.fetch.return_value = [
+        {"text": "Segment one", "start": 0.0, "duration": 1.0},
+        {"text": "Segment two", "start": 1.0, "duration": 1.0},
+    ]
+
+    mock_transcript_list = MagicMock()
+    mock_transcript_list.find_transcript.return_value = mock_transcript
+    mock_api.list_transcripts.return_value = mock_transcript_list
+
+    # Act
+    result = await transcript_service.get_transcript(video_id)
+
+    # Assert
+    assert result["status"] == "success"
+    assert result["total_token_count"] == 10  # 2 segments * 5 tokens each
+    assert result["segments"] is not None
+    assert len(result["segments"]) == 2
+    assert result["segments"][0]["token_count"] == 5
+    assert result["segments"][1]["token_count"] == 5
+    assert mock_count_tokens.call_count == 2
