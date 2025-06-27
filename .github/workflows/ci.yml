@@ -180,6 +180,10 @@ jobs:
     needs: build
     if: github.event_name == 'push'
 
+    permissions:
+      contents: read
+      security-events: write
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
