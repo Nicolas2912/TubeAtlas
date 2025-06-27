@@ -1,0 +1,40 @@
+# Development overrides for docker-compose.yml
+# This file is automatically loaded when running 'docker compose up'
+# Use 'docker compose -f docker-compose.yml up' to skip these overrides
+
+services:
+  api:
+    # Enable live reload for development
+    command: uvicorn tubeatlas.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Mount source code for live reload
+      - ./src:/app/src
+      # Mount data directory
+      - ./data:/app/data
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+    # Remove healthcheck for faster development iteration
+    healthcheck:
+      disable: true
+
+  celery-worker:
+    # Enable auto-reload for celery worker in development
+    command: celery -A tubeatlas.celery_app worker --loglevel=debug --reload
+    volumes:
+      # Mount source code for live reload
+      - ./src:/app/src
+      # Mount data directory
+      - ./data:/app/data
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+    # Remove healthcheck for faster development iteration
+    healthcheck:
+      disable: true
+
+  flower:
+    # Always include flower in development
+    profiles: []
+    volumes:
+      - ./src:/app/src

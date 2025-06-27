@@ -1,0 +1,98 @@
+services:
+  # Redis service for caching and message queue
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Main API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite+aiosqlite:///./data/tubeatlas.db
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Celery worker service
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    command: celery -A tubeatlas.celery_app worker --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite+aiosqlite:///./data/tubeatlas.db
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "celery", "-A", "tubeatlas.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Celery Flower for monitoring (optional, for development)
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    command: celery -A tubeatlas.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    profiles:
+      - monitoring
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
