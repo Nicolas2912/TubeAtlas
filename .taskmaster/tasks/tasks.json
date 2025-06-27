@@ -197,7 +197,7 @@
               4
             ],
             "details": "• Implement repository.upsert(data, conflict_field='video_id').\n• In fetch_channel_videos consumer loop, check repository.exists(video_id) to decide early exit.\n• Wrap DB ops in transaction per video to avoid partial writes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "SQLite or in-memory DB; insert duplicate video; ensure upsert updates not duplicates; incremental stop verified."
           },
           {
@@ -207,8 +207,8 @@
             "dependencies": [
               5
             ],
-            "details": "• Decorator inspects exception type, sleeps exponentially, re-raises after max.\n• Apply to API/network methods in youtube_service and transcript_service.\n• Log retries via standard logging.",
-            "status": "pending",
+            "details": "• Decorator inspects exception type, sleeps exponentially, re-raises after max.\n• Apply to API/network methods in youtube_service and transcript_service.\n• Log retries via standard logging.\n<info added on 2025-06-27T19:01:52.564Z>\n• TranscriptService no longer raises on transcript fetch failure; it again returns {'fetch_error': …}. Accordingly, the retry decorator was removed from its fetch path to preserve existing call‐site handling.  \n• process_channel_transcripts now transparently accepts both synchronous and asynchronous generators; an internal _iterate helper drives consumption and halts correctly when incremental mode meets previously-seen video_id.  \n• retry utility fixed: jitter is now interpreted as a maximum random offset (0 ≤ rand ≤ jitter) instead of a multiplier; parameter is fully type-checked.  \n• Added exhaustive unit coverage in tests/unit/test_retry.py for synchronous and asynchronous flows, verifying back-off sequence, jitter range, exception propagation, and max-attempt behaviour.  \n• All 84 tests (plus the new retry suite) pass locally; CI green and branch ready for merge.\n</info added on 2025-06-27T19:01:52.564Z>",
+            "status": "done",
             "testStrategy": "Inject faults raising QuotaExceededError; assert retries and eventual failure."
           },
           {
@@ -344,7 +344,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T17:34:55.305Z",
+      "updated": "2025-06-27T18:53:17.027Z",
       "description": "Tasks for master context"
     }
   }

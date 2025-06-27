@@ -88,6 +88,11 @@ app.include_router(transcripts.router)
 app.include_router(knowledge_graphs.router)
 app.include_router(chat.router)
 
+# Register global exception handlers (after routers to ensure they capture all)
+from .api.exception_handlers import register_exception_handlers  # noqa: E402
+
+register_exception_handlers(app)
+
 
 @app.get("/")
 async def root():

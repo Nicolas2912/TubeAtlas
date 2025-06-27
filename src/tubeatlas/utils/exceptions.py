@@ -59,3 +59,9 @@ class ConfigurationException(TubeAtlasException):
     """Exception for configuration-related errors."""
 
     pass
+
+
+class TranscriptDownloadError(TubeAtlasException):
+    """Exception raised when transcript download fails after retries."""
+
+    pass
