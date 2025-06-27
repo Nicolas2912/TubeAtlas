@@ -54,4 +54,17 @@ I implemented the `get_transcript` method within the `src/tubeatlas/services/tra
 
 The implementation was developed to align with the subtask's requirements. The logic directly addresses the specified fallback strategy and error handling. The `extract_transcript` method, which was previously a placeholder, was updated to use the new, more robust `get_transcript` method, ensuring that existing functionality is improved. The structured return type makes the service's output predictable and easier to integrate with other parts of the application, such as the database repositories that will be developed in subsequent tasks.
 
-The logic is self-contained within the `TranscriptService` and has no external side effects beyond the API calls, making it straightforward to unit test by mocking the `youtube-transcript-api`.
+To ensure the correctness and robustness of the `TranscriptService`, a comprehensive suite of unit tests was implemented in `tests/unit/test_transcript_service.py`. These tests use `pytest` and `unittest.mock` to isolate the service from the external `youtube-transcript-api`.
+
+Key test scenarios covered:
+-   **Successful Retrieval**: Verifies that a transcript is correctly fetched when the preferred language is available.
+-   **Fallback Logic**:
+    -   Tests the fallback to the next available **manually created** transcript if the preferred language is not found.
+    -   Tests the fallback to the **first available transcript** (even if generated) when no manual transcripts are present.
+-   **Error Handling**:
+    -   Asserts that the service returns a `'disabled'` status when a `TranscriptsDisabled` exception is raised.
+    -   Asserts a `'not_found'` status for `NoTranscriptFound` exceptions.
+    -   Confirms a `'fetch_error'` status when an unexpected exception occurs during the final fetch operation.
+-   **Helper Method**: The `extract_transcript` helper method was also tested to ensure it correctly concatenates segments on success and returns `None` on failure.
+
+All tests are passing, confirming that the service behaves as expected across various success and failure scenarios.
