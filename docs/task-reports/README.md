@@ -24,6 +24,12 @@ Each task report provides:
 | 1.4 | Dockerize Application and Compose Services | ✅ COMPLETED | [task-1.4-dockerize-application-compose.md](./task-1.4-dockerize-application-compose.md) |
 | 1.5 | Implement CI/CD Pipeline with GitHub Actions | ✅ COMPLETED | [task-1.5-ci-cd-pipeline.md](./task-1.5-ci-cd-pipeline.md) |
 
+### Task 2: Implement Database Schema & ORM Models
+
+| Subtask | Title | Status | Report |
+|---------|-------|--------|--------|
+| 2.1 | Configure Async SQLite Engine and Session Factory | ✅ COMPLETED | [task-2.1-configure-async-sqlite-engine.md](./task-2.1-configure-async-sqlite-engine.md) |
+
 ### Future Tasks
 Additional task reports will be added as development progresses through the project phases.
 

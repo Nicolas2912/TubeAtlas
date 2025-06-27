@@ -9,7 +9,7 @@
         "testStrategy": "• Run `poetry run pytest -q` ⇒ zero tests fail.\n• Execute `pre-commit run --all-files` ⇒ no linting issues.\n• `docker compose up` then GET /docs ⇒ returns 200.\n• GitHub Action completes on first push without red status.",
         "priority": "medium",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -76,8 +76,64 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure Async SQLite Engine and Session Factory",
+            "description": "Create config/database.py configuring an async-safe SQLite engine and session factory.",
+            "dependencies": [],
+            "details": "• Use URL: sqlite+aiosqlite:///tubeatlas.db\n• Instantiate async_engine = create_async_engine(url, pool_size=20, echo=False, future=True)\n• Provide async_sessionmaker(bind=async_engine, expire_on_commit=False) named AsyncSessionLocal\n• Add get_session() async dependency yielding an AsyncSession inside try/ finally.\n• Export engine and session factory so other modules can import without circular references.\n<info added on 2025-06-27T13:51:44.549Z>\nAdditional implementation notes and acceptance criteria:\n\n• Place all engine, sessionmaker, Declarative Base, and create_all helpers in `src/tubeatlas/config/database.py` so that external modules can simply `from tubeatlas.config.database import async_engine, AsyncSessionLocal, Base, init_models`.\n• Define `Base = declarative_base()` immediately after imports; expose it via `__all__`.\n• Provide `async def init_models() -> None` that:\n  – opens an `async_engine.begin()` context  \n  – calls `await conn.run_sync(Base.metadata.create_all)`  \n  – is idempotent and safe to call during application startup or test setup.\n• Supply naming conventions for constraints inside `Base.metadata` (e.g., pk_%(table_name)s, fk_%(table_name)s_%(column_0_name)s) to avoid Alembic conflicts later.\n• Write `tests/test_database.py` using `pytest-asyncio` that:\n  1. acquires a session via `get_session()` and issues a simple `SELECT 1`.\n  2. invokes `init_models()` and asserts that `Base.metadata.sorted_tables` is not empty.\n• Tests must pass with `pytest -q` inside the active TubeAtlas conda environment.\n</info added on 2025-06-27T13:51:44.549Z>\n<info added on 2025-06-27T13:52:30.984Z>\nAdditional adjustments required for this sub-task:\n\n• Ensure the connection URL is exactly sqlite+aiosqlite:///tubeatlas.db (no relative ./ prefix).  \n• Pass pool_size=20 when calling create_async_engine.  \n• Rename async dependency to get_session() and adjust imports/tests accordingly.  \n• Add __all__ = [\"async_engine\", \"AsyncSessionLocal\", \"Base\", \"get_session\", \"init_models\"] at module foot.  \n• Define naming_convention in MetaData({}) and bind it to declarative_base to standardise pk_ / fk_ / uq_ patterns.  \n• Replace any create_tables()/drop_tables() helpers with a single async init_models() routine that is idempotent (no failure if tables already exist).  \n• Update tests and any consumer modules to use new names and exports.\n</info added on 2025-06-27T13:52:30.984Z>\n<info added on 2025-06-27T13:56:45.784Z>\nImplementation finished and verified:\n\n• `src/tubeatlas/config/database.py` now fulfils every listed requirement (engine, session, Base, naming conventions, __all__, get_session, init_models).  \n• Added `greenlet` to dependencies and resolved SQLAlchemy/Pydantic deprecations.  \n• New `tests/test_database.py` contains five async pytest cases covering engine, session factory, naming conventions, init_models idempotency, and a basic SELECT; all pass (`pytest -q` shows 5/5).  \n• Module exports work via `from tubeatlas.config.database import async_engine, AsyncSessionLocal, Base, get_session, init_models`.  \n• Sub-task complete; ready for parent task integration.\n</info added on 2025-06-27T13:56:45.784Z>",
+            "status": "done",
+            "testStrategy": "Write a pytest async test opening a session, executing SELECT 1, and asserting result == 1."
+          },
+          {
+            "id": 2,
+            "title": "Define Declarative Base and create_all Utility",
+            "description": "Establish declarative Base and a utility to create all tables without Alembic, leaving hooks for future migrations.",
+            "dependencies": [
+              1
+            ],
+            "details": "• In config/database.py (or separate metadata.py), declare Base = declarative_base()\n• Implement async def create_all() using async_engine.begin() as conn: await conn.run_sync(Base.metadata.create_all)\n• Place a TODO comment referencing Alembic for future migrations and keep metadata object publicly available.",
+            "status": "pending",
+            "testStrategy": "Invoke create_all() in a test DB file, then query sqlite_master to verify expected tables exist."
+          },
+          {
+            "id": 3,
+            "title": "Implement ORM Models with Columns and Indexes",
+            "description": "Translate PRD SQL schema into SQLAlchemy models for videos, transcripts, knowledge graphs, and processing tasks.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "• Create app/models/ directory with video.py, transcript.py, knowledge_graph.py, processing_task.py\n• Each model inherits from Base and declares __tablename__ explicitly.\n• Reflect all columns, types, PKs, FKs, nullable flags, defaults.\n• Escape reserved words via quoted_name or name_ parameter if necessary.\n• Add simple & composite indexes using Index/UniqueConstraint to mirror PRD (e.g., Index('ix_kg_channel', KnowledgeGraph.channel_id)).\n• Import Base from step 2 and Column types from sqlalchemy.\n• Keep __repr__ methods for debugging.",
+            "status": "pending",
+            "testStrategy": "After create_all(), introspect metadata.tables to ensure every table/column/index exists; write unit tests creating and committing example objects."
+          },
+          {
+            "id": 4,
+            "title": "Build Repository Layer with CRUD Operations",
+            "description": "Create reusable BaseRepository and model-specific repositories encapsulating async CRUD logic.",
+            "dependencies": [
+              3
+            ],
+            "details": "• In app/repositories/, define BaseRepository<T> with create, get, update, delete, list methods accepting AsyncSession.\n• Use SQLAlchemy 2.0 style async queries (select(), update(), delete()).\n• Implement VideoRepository, TranscriptRepository, KnowledgeGraphRepository, ProcessingTaskRepository inheriting from BaseRepository and adding domain-specific helpers (e.g., list_by_channel).\n• Ensure methods receive session via dependency injection (get_session from step 1).",
+            "status": "pending",
+            "testStrategy": "Mock an in-memory sqlite URI, run create_all(), then test each CRUD method adding, fetching, updating, and deleting records."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Healthcheck Middleware and Startup Hooks into FastAPI",
+            "description": "Add middleware/endpoints to verify DB connectivity and ensure tables are created at application startup.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "• In main.py, add @app.on_event('startup') async def db_startup(): await create_all() and test a simple SELECT 1.\n• Implement middleware catching DB exceptions and transforming into 503 errors.\n• Add /health/db endpoint that opens an AsyncSession, runs SELECT 1, and returns 200 OK if success.\n• Register middleware and endpoint with FastAPI.",
+            "status": "pending",
+            "testStrategy": "Spin up TestClient, call /health/db expecting 200; simulate engine.dispose() then ensure middleware converts failure to 503."
+          }
+        ]
       },
       {
         "id": 3,
@@ -201,7 +257,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T13:33:38.039Z",
+      "updated": "2025-06-27T13:56:53.880Z",
       "description": "Tasks for master context"
     }
   }

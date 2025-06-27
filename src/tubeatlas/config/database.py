@@ -2,22 +2,37 @@
 
 from typing import AsyncGenerator
 
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 from .settings import settings
 
-# Create async engine
-engine = create_async_engine(settings.database_url, echo=settings.debug, future=True)
+# Define naming convention for constraints to avoid Alembic conflicts
+naming_convention = {
+    "pk": "pk_%(table_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "ix": "ix_%(table_name)s_%(column_0_name)s",
+}
 
-# Create async session factory
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+# Create metadata with naming convention
+metadata = MetaData(naming_convention=naming_convention)
 
 # Base class for all models
-Base = declarative_base()
+Base = declarative_base(metadata=metadata)
+
+# Create async engine with pool_size as specified
+async_engine = create_async_engine(
+    settings.database_url, pool_size=20, echo=False, future=True
+)
+
+# Create async session factory
+AsyncSessionLocal = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 
-async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get database session dependency."""
     async with AsyncSessionLocal() as session:
         try:
@@ -26,13 +41,15 @@ async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def create_tables():
-    """Create all database tables."""
-    async with engine.begin() as conn:
+async def init_models() -> None:
+    """Initialize database models (create all tables).
+
+    This function is idempotent and safe to call during application startup
+    or test setup. It will not fail if tables already exist.
+    """
+    async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def drop_tables():
-    """Drop all database tables."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+# Export commonly used components
+__all__ = ["async_engine", "AsyncSessionLocal", "Base", "get_session", "init_models"]

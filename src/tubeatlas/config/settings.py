@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     youtube_api_key: Optional[str] = None
 
     # Database Configuration
-    database_url: str = "sqlite+aiosqlite:///./tubeatlas.db"
+    database_url: str = "sqlite+aiosqlite:///tubeatlas.db"
 
     # Redis Configuration
     redis_url: str = "redis://localhost:6379"
@@ -39,12 +39,11 @@ class Settings(BaseSettings):
     default_language: str = "en"
     max_videos_per_channel: int = 1000
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"  # Ignore extra environment variables
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",  # Ignore extra environment variables
+    }
 
 
 # Global settings instance
