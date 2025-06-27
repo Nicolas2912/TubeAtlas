@@ -13,6 +13,18 @@ class YouTubeAPIException(TubeAtlasException):
     pass
 
 
+class QuotaExceededError(YouTubeAPIException):
+    """Exception raised when YouTube API quota is exceeded."""
+
+    pass
+
+
+class TransientAPIError(YouTubeAPIException):
+    """Exception for transient API errors that can be retried."""
+
+    pass
+
+
 class TranscriptNotAvailableException(TubeAtlasException):
     """Exception when transcript is not available for a video."""
 

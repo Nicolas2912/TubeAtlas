@@ -24,6 +24,7 @@ pydantic = "^2.5.0"
 pydantic-settings = "^2.0.0"
 tiktoken = "^0.5.0"
 greenlet = "^3.2.3"
+isodate = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"

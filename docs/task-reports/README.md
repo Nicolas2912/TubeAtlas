@@ -34,6 +34,12 @@ Each task report provides:
 | 2.4 | Build Repository Layer with CRUD Operations | ✅ COMPLETED | [task-2.4-build-repository-layer-crud-operations.md](./task-2.4-build-repository-layer-crud-operations.md) |
 | 2.5 | Integrate Healthcheck Middleware and Startup Hooks into FastAPI | ✅ COMPLETED | [task-2.5-healthcheck-middleware-startup-hooks.md](./task-2.5-healthcheck-middleware-startup-hooks.md) |
 
+### Task 3: Develop YouTube Service & Transcript Management
+
+| Subtask | Title | Status | Report |
+|---------|-------|--------|--------|
+| 3.1 | Create YouTube API client with pagination & exponential back-off | ✅ COMPLETED | [task-3.1-youtube-api-client-pagination.md](./task-3.1-youtube-api-client-pagination.md) |
+
 ### Maintenance & Fixes
 
 - **CI/CD** ✅ [CI/CD Pipeline Issues Fixed](ci-cd-pipeline-fixes.md) - Legacy code conflicts, hook updates, baseline regeneration

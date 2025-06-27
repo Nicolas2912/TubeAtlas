@@ -76,7 +76,7 @@
         "dependencies": [
           1
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -145,8 +145,95 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create YouTube API client with pagination & exponential back-off",
+            "description": "Build a reusable helper in youtube_service.py that authenticates via google-api-python-client, requests playlistItems in pages of 50, and transparently retries with exponential back-off on transient HTTP / quota errors.",
+            "dependencies": [],
+            "details": "• Instantiate build('youtube','v3',developerKey=...) once and reuse.\n• Implement _paged_request(endpoint, params) yielding items.\n• Use backoff library or manual sleep with jitter: wait=min(2**attempt, 64).\n• Raise custom QuotaExceededError or TransientAPIError after ≥3 failed attempts.\n• Return raw JSON per page for later storage.\n<info added on 2025-06-27T16:15:18.024Z>\nImplementation completed.\n\n• Finished YouTube API client with _execute_with_retry() featuring exponential back-off (wait = min(2**attempt, max_wait) ±25 % jitter), quota-aware handling (403/quota), transient retry (429, 5xx) and max wait cap (64 s).\n• Added custom exceptions QuotaExceededError and TransientAPIError.\n• Implemented _paged_request() that transparently handles pageToken pagination and yields raw JSON pages.\n• Introduced cached, thread-safe youtube_client property for single build('youtube','v3') instantiation.\n• Integrated detailed logging and type-hinted, well-documented code following project conventions.\n• Added 14 unit tests (successful paths, retries, quota, pagination) using mocks; all pass.\n</info added on 2025-06-27T16:15:18.024Z>",
+            "status": "done",
+            "testStrategy": "Mock googleapiclient.discovery.build; simulate quota errors; assert retries & total attempts."
+          },
+          {
+            "id": 2,
+            "title": "Implement fetch_channel_videos generator",
+            "description": "Write fetch_channel_videos(channel_url, include_shorts, max_videos) in youtube_service.py that yields normalized metadata dicts for each video.",
+            "dependencies": [
+              1
+            ],
+            "details": "• Resolve channel_url → uploads playlist ID via channels().list.\n• Iterate playlistItems via helper from Subtask 1.\n• Filter out shorts unless include_shorts.\n• Stop after max_videos.\n• Normalize fields: video_id, title, published_at, duration, description, etc.\n• Yield dict and optionally raw_json.\n• Return a generator (yield one by one).\n<info added on 2025-06-27T16:21:38.938Z>\n• Batch video IDs from playlistItems.list into chunks of ≤50 and call videos().list(part='snippet,contentDetails') to hydrate metadata (≈8 quota units per batch).  \n• Detect Shorts with a three-way heuristic: snippet.categoryId == '42', parsed duration ≤ 60 s, or presence of “#shorts” (case-insensitive) in title/description; exclude unless include_shorts=True.  \n• Skip or log playlist entries that resolve to private or deleted videos (videos().list returns no items) while preserving correct pagination and max_videos counting.  \n• Track and expose estimated quota consumption (~0.18 units per video; ~180 units/1000 videos) and support optional sleep_between_calls for back-off on 403 rate-limit errors.\n</info added on 2025-06-27T16:21:38.938Z>\n<info added on 2025-06-27T16:25:35.304Z>\n• Completed fetch_channel_videos() generator implementation:\n  – Resolves /channel/, @handle, /user/, and /c/ URLs to the uploads playlist  \n  – Streams per-video dicts with 20+ normalized fields (e.g., view_count, like_count, tags, duration_seconds) parsed with isodate  \n  – Batches ID hydration in groups of 50 via videos().list to sustain ~0.18 quota units per video  \n  – Applies three-way Shorts filter (categoryId = 42, duration ≤ 60 s, “#shorts” in title/description) gated by include_shorts  \n  – Skips private/deleted items without breaking pagination; enforces max_videos with early exit\n\n• Added dependency: isodate for ISO-8601 duration parsing\n\n• Test suite: 36 unit/integration tests covering URL resolution, pagination, batching, shorts detection, filtering, limits, and error handling (API failures, rate limits)\n</info added on 2025-06-27T16:25:35.304Z>",
+            "status": "done",
+            "testStrategy": "Hit YouTube mock fixtures; ensure max_videos respected; shorts filtered."
+          },
+          {
+            "id": 3,
+            "title": "Develop TranscriptService to download transcripts with fallback logic",
+            "description": "Create transcript_service.py providing list_transcripts & fetch per language using youtube-transcript-api, falling back to Google CC if necessary, and returning structured transcript data with availability status.",
+            "dependencies": [
+              2
+            ],
+            "details": "• For each video_id call YouTubeTranscriptApi.list_transcripts.\n• Choose preferred language (en, then auto-en, else first available).\n• If API raises NoTranscriptFound or Disabled, set status none or disabled_by_creator.\n• Standardize return: {video_id, language, status, segments: [ { start, text, duration } ] }.",
+            "status": "pending",
+            "testStrategy": "Unit tests mocking youtube-transcript-api exceptions paths; assert status mapping."
+          },
+          {
+            "id": 4,
+            "title": "Integrate token counting into TranscriptService",
+            "description": "After Task-4 provides utils/token_counter.py, call it to compute token_count & segment_token_counts for each transcript.",
+            "dependencies": [
+              3
+            ],
+            "details": "• Import token_counter.count_tokens(text).\n• For each segment and full transcript compute counts.\n• Add fields token_count, segment_tokens to transcript dict.",
+            "status": "pending",
+            "testStrategy": "Stub token_counter; verify counts stored."
+          },
+          {
+            "id": 5,
+            "title": "Persist video & transcript data with upsert and incremental mode",
+            "description": "Use VideoRepository and TranscriptRepository to upsert records; stop processing when an existing video is encountered unless update_existing=True.",
+            "dependencies": [
+              4
+            ],
+            "details": "• Implement repository.upsert(data, conflict_field='video_id').\n• In fetch_channel_videos consumer loop, check repository.exists(video_id) to decide early exit.\n• Wrap DB ops in transaction per video to avoid partial writes.",
+            "status": "pending",
+            "testStrategy": "SQLite or in-memory DB; insert duplicate video; ensure upsert updates not duplicates; incremental stop verified."
+          },
+          {
+            "id": 6,
+            "title": "Add centralized error handling & retry decorators",
+            "description": "Create exceptions.py with custom errors (QuotaExceededError, TransientAPIError, TranscriptDownloadError). Implement @retry_on_exception decorator (≥3 attempts) used across services.",
+            "dependencies": [
+              5
+            ],
+            "details": "• Decorator inspects exception type, sleeps exponentially, re-raises after max.\n• Apply to API/network methods in youtube_service and transcript_service.\n• Log retries via standard logging.",
+            "status": "pending",
+            "testStrategy": "Inject faults raising QuotaExceededError; assert retries and eventual failure."
+          },
+          {
+            "id": 7,
+            "title": "Create Celery task shells for download_channel and download_video",
+            "description": "Add tasks.py containing Celery shared_task functions that enqueue channel/video downloads, wiring to service methods but leaving heavy processing for later Task-6.",
+            "dependencies": [
+              6
+            ],
+            "details": "• Define @shared_task(bind=True, max_retries=3) download_channel(channel_url, include_shorts=False, max_videos=None, update_existing=False).\n• Inside, call fetch_channel_videos and TranscriptService but without summarization.\n• Same for download_video(video_url).\n• Use apply_async with acks_late and countdown for retry delays.",
+            "status": "pending",
+            "testStrategy": "Celery unit test with eager mode; ensure task executed and DB records created."
+          },
+          {
+            "id": 8,
+            "title": "Persist raw JSON responses for debugging",
+            "description": "Store every raw API response to /data/raw/<video_id>.json during processing for later offline inspection.",
+            "dependencies": [
+              7
+            ],
+            "details": "• Ensure /data/raw directory exists (os.makedirs, exist_ok=True).\n• In youtube_service fetch loop, after receiving full metadata JSON, dump to file using json.dump with indent=2.\n• Filename based on video_id; overwrite if re-downloaded.\n• Handle IOError with logging but don’t abort processing.",
+            "status": "pending",
+            "testStrategy": "Run download_video; assert file created with correct contents."
+          }
+        ]
       },
       {
         "id": 4,
@@ -257,7 +344,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T15:49:35.834Z",
+      "updated": "2025-06-27T16:27:20.889Z",
       "description": "Tasks for master context"
     }
   }
