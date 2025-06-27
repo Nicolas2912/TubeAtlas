@@ -20,7 +20,7 @@ Each task report provides:
 |---------|-------|--------|--------|
 | 1.1 | Bootstrap Git Repository and Poetry Project | ✅ COMPLETED | [task-1.1-bootstrap-poetry-project.md](./task-1.1-bootstrap-poetry-project.md) |
 | 1.2 | Scaffold Project Structure and Manage Dependencies | ✅ COMPLETED | [task-1.2-scaffold-project-structure.md](./task-1.2-scaffold-project-structure.md) |
-| 1.3 | Configure Code Quality Tooling & Pre-commit Hooks | 🔄 PENDING | - |
+| 1.3 | Configure Code Quality Tooling & Pre-commit Hooks | ✅ COMPLETED | [task-1.3-code-quality-tooling.md](./task-1.3-code-quality-tooling.md) |
 | 1.4 | Dockerize Application and Compose Services | 🔄 PENDING | - |
 | 1.5 | Implement CI/CD Pipeline with GitHub Actions | 🔄 PENDING | - |
 
