@@ -63,8 +63,6 @@ class TranscriptService:
             self.video_repo = None  # type: ignore[assignment]
             self.transcript_repo = None  # type: ignore[assignment]
 
-        assert self.youtube_service is not None  # for type checking
-
     def _find_transcript(self, transcript_list_iterator, language_codes: List[str]):
         """Find the best transcript from a list based on language codes."""
         # Convert iterator to a list to allow multiple iterations
@@ -132,6 +130,16 @@ class TranscriptService:
                 "segments": None,
                 "total_token_count": None,
             }
+        except Exception as exc:
+            logger.error("Failed to fetch transcript for video %s: %s", video_id, exc)
+            return {
+                "status": "fetch_error",
+                "video_id": video_id,
+                "language_code": None,
+                "is_generated": None,
+                "segments": None,
+                "total_token_count": None,
+            }
 
         transcript = self._find_transcript(transcript_list, language_codes)
 
@@ -171,8 +179,8 @@ class TranscriptService:
                 "segments": segments_with_tokens,
                 "total_token_count": total_tokens,
             }
-        except Exception as e:
-            logger.error(f"Failed to fetch transcript for video {video_id}: {e}")
+        except Exception as exc:
+            logger.error("Failed to fetch transcript for video %s: %s", video_id, exc)
             return {
                 "status": "fetch_error",
                 "video_id": video_id,
@@ -202,7 +210,7 @@ class TranscriptService:
         logger.info(f"Counting tokens for model: {model}")
         return count_tokens_util(text, model)
 
-    async def process_channel_transcripts(
+    async def process_channel_transcripts(  # noqa: C901
         self,
         channel_url: str,
         update_existing: bool = False,
@@ -235,22 +243,24 @@ class TranscriptService:
         created_videos = updated_videos = skipped_videos = 0
         created_trans = updated_trans = skipped_trans = 0
 
-        # YouTubeService returns a *synchronous* generator; iterate in standard
-        # `for` loop inside the async function. (mypy: ignore for sync iter.)
-        for video_meta in self.youtube_service.fetch_channel_videos(  # type: ignore[misc]
+        video_iter = self.youtube_service.fetch_channel_videos(
             channel_url,
             include_shorts=include_shorts,
             max_videos=max_videos,
-        ):
+        )
+
+        async def _process_video(video_meta):
+            nonlocal created_videos, updated_videos, skipped_videos, created_trans, updated_trans, skipped_trans
+
             video_id: str = video_meta["id"]
 
             if not update_existing and await self.video_repo.exists(video_id):
                 logger.info(
                     "Encountered existing video %s – incremental stop.", video_id
                 )
-                break  # incremental stop
+                return True  # signal to stop processing further videos
 
-            # Upsert video ---------------------------------------------------
+            # Upsert video
             existing_video = await self.video_repo.get_by_id(video_id)
             await self.video_repo.upsert(video_meta)
             if existing_video:
@@ -258,14 +268,14 @@ class TranscriptService:
             else:
                 created_videos += 1
 
-            # Fetch transcript ---------------------------------------------
+            # Fetch transcript
             transcript_data = await self.get_transcript(video_id)
 
             if transcript_data["status"] != "success":
                 skipped_videos += 1
-                continue
+                skipped_trans += 1
+                return False
 
-            # Prepare transcript row
             content_text = " ".join(
                 seg["text"] for seg in transcript_data["segments"] or []
             )
@@ -282,12 +292,26 @@ class TranscriptService:
                 "processing_status": "completed",
             }
 
-            existing_trans = await self.transcript_repo.get_by_id(video_id)
-            _ = await self.transcript_repo.upsert(transcript_row)
-            if existing_trans:
+            existing_trans_row = await self.transcript_repo.get_by_id(video_id)
+            await self.transcript_repo.upsert(transcript_row)
+            if existing_trans_row:
                 updated_trans += 1
             else:
                 created_trans += 1
+
+            return False  # continue processing
+
+        # Handle async vs sync iterables
+        if hasattr(video_iter, "__aiter__"):
+            async for video_meta in video_iter:  # type: ignore[async-iter-compatible]
+                should_stop = await _process_video(video_meta)
+                if should_stop:
+                    break
+        else:
+            for video_meta in video_iter:  # type: ignore[misc]
+                should_stop = await _process_video(video_meta)
+                if should_stop:
+                    break
 
         return {
             "videos": {
