@@ -1,12 +1,10 @@
 """Video metadata models."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.declarative.api import DeclarativeMeta
 
-Base: DeclarativeMeta = declarative_base()
+from tubeatlas.config.database import Base
 
 
 class Video(Base):
@@ -28,8 +26,10 @@ class Video(Base):
     category_name = Column(String)
     tags = Column(JSON)  # JSON array
     thumbnail_url = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
 
     def __repr__(self) -> str:
         """String representation of Video model."""

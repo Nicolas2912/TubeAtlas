@@ -106,8 +106,8 @@
               1,
               2
             ],
-            "details": "• Create app/models/ directory with video.py, transcript.py, knowledge_graph.py, processing_task.py\n• Each model inherits from Base and declares __tablename__ explicitly.\n• Reflect all columns, types, PKs, FKs, nullable flags, defaults.\n• Escape reserved words via quoted_name or name_ parameter if necessary.\n• Add simple & composite indexes using Index/UniqueConstraint to mirror PRD (e.g., Index('ix_kg_channel', KnowledgeGraph.channel_id)).\n• Import Base from step 2 and Column types from sqlalchemy.\n• Keep __repr__ methods for debugging.",
-            "status": "pending",
+            "details": "• Create app/models/ directory with video.py, transcript.py, knowledge_graph.py, processing_task.py\n• Each model inherits from Base and declares __tablename__ explicitly.\n• Reflect all columns, types, PKs, FKs, nullable flags, defaults.\n• Escape reserved words via quoted_name or name_ parameter if necessary.\n• Add simple & composite indexes using Index/UniqueConstraint to mirror PRD (e.g., Index('ix_kg_channel', KnowledgeGraph.channel_id)).\n• Import Base from step 2 and Column types from sqlalchemy.\n• Keep __repr__ methods for debugging.\n<info added on 2025-06-27T14:22:24.457Z>\n• Replace local Base definitions in every model with a single shared import: `from tubeatlas.config.database import Base`.  \n• Cross-check all column names, types, nullability, defaults, PK/FK relationships and constraints against the PRD; adjust discrepancies accordingly.  \n• Add any missing single- or multi-column indexes/unique constraints required by the PRD (e.g., ix_video_published_at, uq_transcript_video_id_lang, ix_processing_task_status_created_at).  \n• Create/modify app/models/__init__.py to re-export Video, Transcript, KnowledgeGraph and ProcessingTask for clean external imports.  \n• Write pytest suite (tests/models/) that spins up an in-memory SQLite engine, runs `Base.metadata.create_all(engine)`, and asserts:  \n  – every expected table/column exists,  \n  – indexes/unique constraints are present,  \n  – basic insert/select operations honour PKs, FKs and defaults.  \n• Add these tests to CI so schema regressions are caught automatically.\n</info added on 2025-06-27T14:22:24.457Z>\n<info added on 2025-06-27T14:27:12.621Z>\n• Implementation completed and merged: centralized Base import, PRD-aligned columns, constraints, and defaults across all four ORM models  \n• Added/renamed indexes (`ix_knowledge_graphs_video_id`, `ix_knowledge_graphs_channel_id`, etc.) per naming convention  \n• `app/models/__init__.py` now re-exports Video, Transcript, KnowledgeGraph, ProcessingTask for clean external access  \n• ProcessingTask moved to its own module; all `__repr__` methods verified  \n• Test suite (12 cases) spins up in-memory SQLite, asserts schema, indexes, CRUD behaviour and __repr__ output; all tests pass and are wired into CI  \n• Datetime defaults updated to `datetime.now(UTC)` to suppress deprecation warnings  \n• Overall: 21 total tests green, confirming schema integrity and model functionality\n</info added on 2025-06-27T14:27:12.621Z>",
+            "status": "done",
             "testStrategy": "After create_all(), introspect metadata.tables to ensure every table/column/index exists; write unit tests creating and committing example objects."
           },
           {
@@ -257,7 +257,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T14:15:17.810Z",
+      "updated": "2025-06-27T14:27:17.806Z",
       "description": "Tasks for master context"
     }
   }

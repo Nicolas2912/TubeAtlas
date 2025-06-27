@@ -30,6 +30,9 @@ Each task report provides:
 |---------|-------|--------|--------|
 | 2.1 | Configure Async SQLite Engine and Session Factory | ✅ COMPLETED | [task-2.1-configure-async-sqlite-engine.md](./task-2.1-configure-async-sqlite-engine.md) |
 | 2.2 | Define Declarative Base and create_all Utility | ✅ COMPLETED | [task-2.2-define-declarative-base-create-all.md](./task-2.2-define-declarative-base-create-all.md) |
+| 2.3 | Implement ORM Models with Columns and Indexes | ✅ COMPLETED | [task-2.3-implement-orm-models-columns-indexes.md](./task-2.3-implement-orm-models-columns-indexes.md) |
+| 2.4 | Build Repository Layer with CRUD Operations | 📋 PENDING | *Awaiting 2.3* |
+| 2.5 | Integrate Healthcheck Middleware and Startup Hooks into FastAPI | 📋 PENDING | *Awaiting 2.1, 2.4* |
 
 ### Future Tasks
 Additional task reports will be added as development progresses through the project phases.

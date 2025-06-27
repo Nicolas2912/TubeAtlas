@@ -1,12 +1,10 @@
 """Transcript models."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.declarative.api import DeclarativeMeta
 
-Base: DeclarativeMeta = declarative_base()
+from tubeatlas.config.database import Base
 
 
 class Transcript(Base):
@@ -24,8 +22,10 @@ class Transcript(Base):
     openai_tokens = Column(Integer)
     gemini_tokens = Column(Integer)
     processing_status = Column(String, default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
 
     def __repr__(self) -> str:
         """String representation of Transcript model."""
