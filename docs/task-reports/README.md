@@ -22,7 +22,7 @@ Each task report provides:
 | 1.2 | Scaffold Project Structure and Manage Dependencies | ✅ COMPLETED | [task-1.2-scaffold-project-structure.md](./task-1.2-scaffold-project-structure.md) |
 | 1.3 | Configure Code Quality Tooling & Pre-commit Hooks | ✅ COMPLETED | [task-1.3-code-quality-tooling.md](./task-1.3-code-quality-tooling.md) |
 | 1.4 | Dockerize Application and Compose Services | ✅ COMPLETED | [task-1.4-dockerize-application-compose.md](./task-1.4-dockerize-application-compose.md) |
-| 1.5 | Implement CI/CD Pipeline with GitHub Actions | 🔄 PENDING | - |
+| 1.5 | Implement CI/CD Pipeline with GitHub Actions | ✅ COMPLETED | [task-1.5-ci-cd-pipeline.md](./task-1.5-ci-cd-pipeline.md) |
 
 ### Future Tasks
 Additional task reports will be added as development progresses through the project phases.
