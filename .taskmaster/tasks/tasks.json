@@ -174,8 +174,8 @@
             "dependencies": [
               2
             ],
-            "details": "• For each video_id call YouTubeTranscriptApi.list_transcripts.\n• Choose preferred language (en, then auto-en, else first available).\n• If API raises NoTranscriptFound or Disabled, set status none or disabled_by_creator.\n• Standardize return: {video_id, language, status, segments: [ { start, text, duration } ] }.",
-            "status": "pending",
+            "details": "• For each video_id call YouTubeTranscriptApi.list_transcripts.\n• Choose preferred language (en, then auto-en, else first available).\n• If API raises NoTranscriptFound or Disabled, set status none or disabled_by_creator.\n• Standardize return: {video_id, language, status, segments: [ { start, text, duration } ] }.\n<info added on 2025-06-27T17:10:59.802Z>\nImplemented get_transcript in TranscriptService to wrap youtube_transcript_api calls and centralize transcript retrieval logic.  \n• Fallback order: explicit preferred language (defaults to \"en\"), any manual transcript, then first available.  \n• Exception handling maps to statuses:  \n  – TranscriptsDisabled → \"disabled\"  \n  – NoTranscriptFound → \"not_found\"  \n  – Other API errors → \"fetch_error\"  \n  – Successful fetch → \"success\"  \n• Returns a typed Transcript dict: { video_id, status, language, segments | None }.  \n• TranscriptSegment and Transcript TypedDicts added for static-type support.  \n• extract_transcript now delegates to get_transcript, removing duplicate logic.\n</info added on 2025-06-27T17:10:59.802Z>",
+            "status": "done",
             "testStrategy": "Unit tests mocking youtube-transcript-api exceptions paths; assert status mapping."
           },
           {
@@ -344,7 +344,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T16:27:20.889Z",
+      "updated": "2025-06-27T17:11:02.912Z",
       "description": "Tasks for master context"
     }
   }
