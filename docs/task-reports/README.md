@@ -42,6 +42,7 @@ Each task report provides:
 | 3.2 | Implement fetch_channel_videos generator | ✅ COMPLETED | [task-3.2-fetch-channel-videos-generator.md](./task-3.2-fetch-channel-videos-generator.md) |
 | 3.3 | Develop TranscriptService to download transcripts with fallback logic | ✅ COMPLETED | [task-3.3-transcript-service.md](./task-3.3-transcript-service.md) |
 | 3.4 | Integrate token counting into TranscriptService | ✅ COMPLETED | [task-3.4-token-counting.md](./task-3.4-token-counting.md) |
+| 3.5 | Persist video & transcript data with upsert and incremental mode | ✅ COMPLETED | [task-3.5-persist-video-transcript.md](./task-3.5-persist-video-transcript.md) |
 
 ### Maintenance & Fixes
 
