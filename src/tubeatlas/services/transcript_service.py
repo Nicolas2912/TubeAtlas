@@ -35,14 +35,22 @@ class TranscriptService:
         # TODO: Initialize transcript API clients
         pass
 
-    def _find_transcript(self, transcript_list, language_codes: List[str]):
+    def _find_transcript(self, transcript_list_iterator, language_codes: List[str]):
         """Find the best transcript from a list based on language codes."""
-        transcript = None
+        # Convert iterator to a list to allow multiple iterations
+        transcript_list = list(transcript_list_iterator)
+
         # Try to find a transcript in the preferred languages
         for lang_code in language_codes:
-            transcript = transcript_list.find_transcript([lang_code])
-            if transcript:
+            try:
+                # The find_transcript method from the original list object is needed.
+                # This is a bit of a workaround for the mock. In reality,
+                # transcript_list_iterator would be the list object itself.
+                original_list_obj = transcript_list_iterator
+                transcript = original_list_obj.find_transcript([lang_code])
                 return transcript
+            except NoTranscriptFound:
+                continue
 
         # If no preferred transcript is found, try to find any manually created one
         for t in transcript_list:
@@ -51,8 +59,8 @@ class TranscriptService:
 
         # If still no transcript, take the first available one
         try:
-            return next(iter(transcript_list))
-        except StopIteration:
+            return transcript_list[0]
+        except IndexError:
             return None
 
     async def get_transcript(
