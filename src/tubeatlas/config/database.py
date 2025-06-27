@@ -41,15 +41,40 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def init_models() -> None:
-    """Initialize database models (create all tables).
+# TODO: Integrate Alembic for schema migrations in future versions
+# This function provides basic table creation for development and testing
+async def create_all() -> None:
+    """Create all database tables.
 
-    This function is idempotent and safe to call during application startup
+    This function creates all tables defined by the Base metadata.
+    It is idempotent and safe to call during application startup
     or test setup. It will not fail if tables already exist.
+
+    Note: This is a simple table creation utility. For production
+    applications, consider using Alembic for proper schema migrations.
     """
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
+async def init_models() -> None:
+    """Initialize database models (create all tables).
+
+    This function is idempotent and safe to call during application startup
+    or test setup. It will not fail if tables already exist.
+
+    Alias for create_all() for backward compatibility.
+    """
+    await create_all()
+
+
 # Export commonly used components
-__all__ = ["async_engine", "AsyncSessionLocal", "Base", "get_session", "init_models"]
+__all__ = [
+    "async_engine",
+    "AsyncSessionLocal",
+    "Base",
+    "metadata",
+    "get_session",
+    "create_all",
+    "init_models",
+]

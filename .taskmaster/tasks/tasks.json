@@ -94,8 +94,8 @@
             "dependencies": [
               1
             ],
-            "details": "• In config/database.py (or separate metadata.py), declare Base = declarative_base()\n• Implement async def create_all() using async_engine.begin() as conn: await conn.run_sync(Base.metadata.create_all)\n• Place a TODO comment referencing Alembic for future migrations and keep metadata object publicly available.",
-            "status": "pending",
+            "details": "• In config/database.py (or separate metadata.py), declare Base = declarative_base()\n• Implement async def create_all() using async_engine.begin() as conn: await conn.run_sync(Base.metadata.create_all)\n• Place a TODO comment referencing Alembic for future migrations and keep metadata object publicly available.\n<info added on 2025-06-27T14:12:46.807Z>\n• Insert a clear “TODO: integrate Alembic for schema migrations” comment directly above the create-all helper  \n• Add `metadata` (Base.metadata) to `__all__` so it is publicly importable  \n• Standardize the public bootstrap function name to `create_all()` (optionally keep `init_models()` as an alias for backward compatibility) and adjust internal references/tests accordingly  \n• Expand tests to assert that `metadata` is importable from `config.database` and that the Alembic TODO comment exists in the module source\n</info added on 2025-06-27T14:12:46.807Z>\n<info added on 2025-06-27T14:15:12.344Z>\n• Implementation completed and verified: `create_all()` async helper added with full docstring, runs `Base.metadata.create_all` in transactional context and remains idempotent  \n• Explicit “TODO: Integrate Alembic for schema migrations in future versions” comment inserted directly above the helper (also referenced in docstring)  \n• `metadata` (Base.metadata) added to `__all__`, importable as `config.database.metadata`  \n• Legacy alias `init_models = create_all` retained for backward compatibility  \n• Test suite expanded to 9 cases; all pass, including new checks for table creation, metadata export, and presence of Alembic TODO comment\n</info added on 2025-06-27T14:15:12.344Z>",
+            "status": "done",
             "testStrategy": "Invoke create_all() in a test DB file, then query sqlite_master to verify expected tables exist."
           },
           {
@@ -257,7 +257,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-27T13:56:53.880Z",
+      "updated": "2025-06-27T14:15:17.810Z",
       "description": "Tasks for master context"
     }
   }

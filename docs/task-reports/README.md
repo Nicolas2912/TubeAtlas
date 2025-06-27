@@ -29,6 +29,7 @@ Each task report provides:
 | Subtask | Title | Status | Report |
 |---------|-------|--------|--------|
 | 2.1 | Configure Async SQLite Engine and Session Factory | ✅ COMPLETED | [task-2.1-configure-async-sqlite-engine.md](./task-2.1-configure-async-sqlite-engine.md) |
+| 2.2 | Define Declarative Base and create_all Utility | ✅ COMPLETED | [task-2.2-define-declarative-base-create-all.md](./task-2.2-define-declarative-base-create-all.md) |
 
 ### Future Tasks
 Additional task reports will be added as development progresses through the project phases.
