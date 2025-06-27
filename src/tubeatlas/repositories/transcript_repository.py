@@ -62,3 +62,33 @@ class TranscriptRepository(BaseRepository[Transcript]):
             select(Transcript).where(Transcript.channel_name == channel_name)
         )
         return list(result.scalars().all())
+
+    async def exists(self, entity_id: str) -> bool:  # type: ignore[override]
+        """Return True if a transcript for the given video ID exists."""
+        result = await self.session.execute(
+            select(Transcript.video_id).where(Transcript.video_id == entity_id)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def upsert(self, data: dict) -> Transcript:  # type: ignore[override]
+        """Insert or update a transcript record based on video_id."""
+        video_id = data.get("video_id")
+        if video_id is None:
+            raise ValueError("Transcript data must include 'video_id' field for upsert")
+
+        valid_keys = {c.key for c in Transcript.__table__.columns}
+        filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+
+        existing = await self.get_by_id(video_id)
+        if existing:
+            for key, value in filtered_data.items():
+                setattr(existing, key, value)
+            await self.session.commit()
+            await self.session.refresh(existing)
+            return existing
+
+        new_transcript = Transcript(**filtered_data)  # type: ignore[arg-type]
+        self.session.add(new_transcript)
+        await self.session.commit()
+        await self.session.refresh(new_transcript)
+        return new_transcript

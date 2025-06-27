@@ -49,3 +49,36 @@ class VideoRepository(BaseRepository[Video]):
             select(Video).where(Video.channel_id == channel_id)
         )
         return list(result.scalars().all())
+
+    async def exists(self, entity_id: str) -> bool:
+        """Return True if a video with the given ID exists."""
+        result = await self.session.execute(
+            select(Video.id).where(Video.id == entity_id)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def upsert(self, data: dict) -> Video:
+        """Insert or update a video record based on the primary key (id)."""
+        video_id = data.get("id")
+        if video_id is None:
+            raise ValueError("Video data must include 'id' field for upsert")
+
+        # Only keep keys that correspond to model columns
+        valid_keys = {c.key for c in Video.__table__.columns}
+        filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+
+        existing = await self.get_by_id(video_id)
+        if existing:
+            # Update existing fields
+            for key, value in filtered_data.items():
+                setattr(existing, key, value)
+            await self.session.commit()
+            await self.session.refresh(existing)
+            return existing
+
+        # Create new video entity
+        new_video = Video(**filtered_data)
+        self.session.add(new_video)
+        await self.session.commit()
+        await self.session.refresh(new_video)
+        return new_video
