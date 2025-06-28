@@ -28,9 +28,11 @@ celery_app.conf.update(
 
 # Task routing (optional - for when we have multiple queues)
 celery_app.conf.task_routes = {
-    "tubeatlas.tasks.process_transcript": {"queue": "transcripts"},
-    "tubeatlas.tasks.generate_knowledge_graph": {"queue": "kg_generation"},
-    "tubeatlas.tasks.process_video": {"queue": "video_processing"},
+    "process_transcript": {"queue": "transcripts"},
+    "generate_knowledge_graph": {"queue": "kg_generation"},
+    "process_video": {"queue": "video_processing"},
+    "tubeatlas.tasks.download_channel": {"queue": "youtube"},
+    "tubeatlas.tasks.download_video": {"queue": "youtube"},
 }
 
 # Auto-discover tasks
