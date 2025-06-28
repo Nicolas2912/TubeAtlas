@@ -2,11 +2,7 @@ from typing import AsyncGenerator, Dict, List
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from tubeatlas.config.database import Base
 from tubeatlas.repositories.video_repository import VideoRepository

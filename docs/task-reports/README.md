@@ -46,6 +46,12 @@ Each task report provides:
 | 3.7 | Create Celery task shells for download_channel and download_video | ✅ COMPLETED | [task-3.7-celery-task-shells.md](./task-3.7-celery-task-shells.md) |
 | 3.8 | Persist raw JSON responses for debugging | ✅ COMPLETED | [task-3.8-persist-raw-json-responses.md](./task-3.8-persist-raw-json-responses.md) |
 
+### Task 4: Implement Modular RAG Foundation with Multi-Strategy Chunking and FAISS Vector Store
+
+| Subtask | Title | Status | Report |
+|---------|-------|--------|--------|
+| 4.2 | TokenCounter Utility | ✅ COMPLETED | [task-4.2-token-counter-utility.md](./task-4.2-token-counter-utility.md) |
+
 ### Maintenance & Fixes
 
 - **CI/CD** ✅ [CI/CD Pipeline Issues Fixed](ci-cd-pipeline-fixes.md) - Legacy code conflicts, hook updates, baseline regeneration

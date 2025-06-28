@@ -1,0 +1,12 @@
+# Task ID: 11
+# Title: Persist video & transcript data with upsert and incremental mode
+# Status: done
+# Dependencies: 3
+# Priority: medium
+# Description: Use VideoRepository and TranscriptRepository to upsert records; stop processing when an existing video is encountered unless update_existing=True.
+# Details:
+• Implement repository.upsert(data, conflict_field='video_id').
+• In fetch_channel_videos consumer loop, check repository.exists(video_id) to decide early exit.
+• Wrap DB ops in transaction per video to avoid partial writes.
+
+# Test Strategy:

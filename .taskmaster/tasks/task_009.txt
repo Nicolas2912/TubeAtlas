@@ -1,0 +1,19 @@
+# Task ID: 9
+# Title: Create Knowledge Graph Visualization Endpoints
+# Status: pending
+# Dependencies: 5, 7
+# Priority: medium
+# Description: Generate and serve interactive visualizations in HTML, JSON & GraphML (FR-9.*).
+# Details:
+1. Use pyvis (NetworkX → vis.js) for HTML, and return serialized GraphML/JSON.
+2. Endpoint `/api/v1/kg/visualize/{kg_id}?format=html|json|graphml`.
+3. Include filtering query params: min_degree, entity_types, timeframe.
+4. Embed styling & legend; front-end ready.
+5. Store generated artifacts in cache (disk) for reuse.
+
+
+# Test Strategy:
+• Unit: input small KG → visualize_json nodes == entities_count.
+• HTML response contains `<script src="https://unpkg.com/vis-network"`.
+• GraphML passes lxml validation.
+• Performance: KG with 5k nodes renders <3s on test machine.

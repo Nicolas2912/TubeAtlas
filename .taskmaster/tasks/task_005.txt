@@ -1,0 +1,30 @@
+# Task ID: 5
+# Title: Build Knowledge Graph Generation Pipeline
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Generate entity-relationship graphs from transcripts via LangChain + OpenAI, store results.
+# Details:
+1. kg_service.py:
+   • Function `generate_video_kg(video_id, model_cfg)`.
+   • Load transcript, chunk via utils/chunking, stream into LangChain `GraphPrompter` chain.
+   • Merge chunk-level triples, deduplicate.
+   • Persist as JSON + GraphML to `/data/kg/<video_id>.{json,graphml}`.
+2. Channel-level KG: aggregate all video KGs then run incremental merge (see PRD 6.4.3) storing `graph_type='channel'`.
+3. Cost tracking: use token counts to estimate $$ and persist in knowledge_graphs table.
+4. Expose internal function `update_knowledge_graphs_for_new_content(channel_id)`.
+Pseudo-code:
+```python
+triples = []
+for chunk in hierarchical_chunk(transcript):
+    triples += llm.extract_triples(chunk)
+kg = nx.DiGraph()
+kg.add_weighted_edges_from(dedupe(triples))
+```
+
+
+# Test Strategy:
+• Mock OpenAI → deterministic triples.
+• Unit test: for sample transcript expect ≥N entities.
+• Regression test: run twice, verify identical KG (dedup works).
+• Performance test: 100 chunks processed asynchronously → completion < NFR-1.1 threshold.

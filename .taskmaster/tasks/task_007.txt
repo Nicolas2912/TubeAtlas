@@ -1,0 +1,24 @@
+# Task ID: 7
+# Title: Develop FastAPI REST API Layer
+# Status: pending
+# Dependencies: 3, 6
+# Priority: medium
+# Description: Expose REST endpoints (FR-7.*, FR-9.*, FR-10.*) with security, docs, rate limiting.
+# Details:
+1. Setup FastAPI app with lifespan event to init DB and Celery.
+2. CORS middleware (`allow_origins=*` placeholder) & HTTPS redirect.
+3. Implement routers:
+   • transcripts.py → POST channel/video (enqueue Celery), GET, DELETE.
+   • knowledge_graphs.py → POST generate, GET, visualize, DELETE.
+   • tasks.py → GET list/status, cancel.
+4. Use fastapi-limiter (Redis) for global rate limit (60/min IP).
+5. OpenAPI schema auto generated; add tags & examples per PRD 8.*.
+6. Structured error responses via utils/exceptions.py.
+7. Enable WebSocket `/ws/status/{task_id}` for real-time progress (FR-10.2).
+
+
+# Test Strategy:
+• FastAPI TestClient calls all endpoints, expect HTTP 2xx & correct JSON.
+• OpenAPI JSON at /openapi.json validated by swagger-spec-validator.
+• Rate limit test: 70 requests/min returns 429.
+• WebSocket test with `websockets` client receives progress updates.

@@ -1,0 +1,234 @@
+# Task ID: 1
+# Title: Setup Project Repository & Development Environment
+# Status: done
+# Dependencies: None
+# Priority: medium
+# Description: Create initial repo, project skeleton, tooling and CI/CD to satisfy NFR-4.* and Phase-1 goals.
+# Details:
+1. Initialize git repository and create Python 3.11 Poetry project.
+2. Scaffold folder tree exactly as in PRD 7.1.1.
+3. Add dependency pins to pyproject.toml: fastapi==0.104.*, uvicorn[standard], sqlalchemy==2.*, aiosqlite, youtube-transcript-api, google-api-python-client, langchain, openai, celery[redis], redis, python-dotenv, pytest, pytest-asyncio, black, flake8, mypy, isort, coverage.
+4. Add pre-commit hooks: black, flake8, mypy, isort, detect-secrets.
+5. Provide Dockerfile (multi-stage): builder → runtime; expose 8000; non-root user.
+6. Provide docker-compose.yml with api, redis, celery-worker services.
+7. Configure GitHub Actions workflow: lint → test → build → push image.
+8. Add .env.template with required variables (OPENAI_API_KEY etc.).
+
+# Test Strategy:
+• Run `poetry run pytest -q` ⇒ zero tests fail.
+• Execute `pre-commit run --all-files` ⇒ no linting issues.
+• `docker compose up` then GET /docs ⇒ returns 200.
+• GitHub Action completes on first push without red status.
+
+# Subtasks:
+## 1. Bootstrap Git Repository and Poetry Project [done]
+### Dependencies: None
+### Description: Create the initial Git repository, configure Python 3.11 with Poetry, and commit baseline files.
+### Details:
+• Run `git init` in the project root and add remote (GitHub).
+• Generate a `.gitignore` via `poetry new` (or GitHub template) covering Python, Poetry, Docker, VSCode, and secrets.
+• Execute `poetry init --name <project_name> --python 3.11 --no-interaction` to create `pyproject.toml`.
+• Configure default virtualenv path (`poetry config virtualenvs.in-project true`).
+• Commit initial state (`README.md`, license).
+<info added on 2025-06-26T19:39:43.538Z>
+• Activate the existing conda environment (confirm Python 3.11), then disable Poetry’s virtual-env creation:
+  `poetry config virtualenvs.create false --local`
+• Generate the project manifest inside repo root:
+  `poetry init --name <project_name> --python "^3.11" --no-interaction`
+• Lock dependencies: `poetry lock`
+• Update `.gitignore` to include `.venv/` and `poetry-debug.log` (for collaborators who may enable local venvs).
+• Reorganize legacy code per PRD: create `src/` and `tests/`; move existing modules into `src/<package_name>/` with `__init__.py`.
+• Verify Poetry is using the conda env: `poetry run python -c "import sys, pprint; pprint.pprint(sys.prefix)"`.
+• Stage and commit `pyproject.toml`, `poetry.lock`, updated `.gitignore`, and folder reorg with message “chore: bootstrap Poetry with conda env & reorganize structure”.
+</info added on 2025-06-26T19:39:43.538Z>
+<info added on 2025-06-26T19:41:28.191Z>
+• Upgrade the active “TubeAtlas” conda environment to Python 3.11 to satisfy the PRD:
+  `conda install python=3.11 -y`
+  Confirm with `python --version` (should report 3.11.x).
+
+• Install Poetry into the user path:
+  `curl -sSL https://install.python-poetry.org | python -`
+  Ensure `$HOME/.local/bin` (Linux/macOS) or `%APPDATA%\Python\Scripts` (Windows) is on `PATH`; verify via `poetry --version`.
+
+• Prevent Poetry from creating a separate virtual env and bind it to the upgraded conda env:
+  `poetry config virtualenvs.create false --local`.
+
+• Initialize the project manifest:
+  `poetry init --name <project_name> --python "^3.11" --no-interaction`
+  `poetry lock`
+
+• Append `.python-version`, `.poetry/`, and `poetry-debug.log` to `.gitignore` (if absent) and commit the changes with message “chore: install Poetry, upgrade to Python 3.11, lock deps”.
+</info added on 2025-06-26T19:41:28.191Z>
+<info added on 2025-06-26T19:46:07.425Z>
+• Subtask completed: Poetry 2.1.3 installed and bound to existing “TubeAtlas” conda environment (Python 3.12.10, exceeding ≥3.11 requirement).
+• Created/updated pyproject.toml, poetry.toml, .gitignore, README.md, and src/tubeatlas/__init__.py; executed `poetry install` and locked dependencies.
+• Validation: `poetry run python -V` outputs 3.12.10, `git status` reports clean working tree.
+• All changes committed with descriptive message; repository ready for the next setup phase.
+</info added on 2025-06-26T19:46:07.425Z>
+
+## 2. Scaffold Project Structure and Manage Dependencies [done]
+### Dependencies: 1.1
+### Description: Create folder tree per PRD 7.1.1, pin runtime & dev dependencies in `pyproject.toml`, and add an environment template.
+### Details:
+• Exactly replicate required directories (e.g., `app/api`, `app/core`, `app/models`, `tests`, etc.).
+• Add listed pinned dependencies under `[tool.poetry.dependencies]` and `[tool.poetry.group.dev.dependencies]`.
+• Execute `poetry add` and `poetry add --group dev` to lock versions.
+• Generate `.env.template` containing placeholders for `OPENAI_API_KEY`, database URL, Redis settings, etc.
+• Add a minimal `main.py` FastAPI entrypoint referencing env vars via `python-dotenv`.
+• Commit changes with message “feat: scaffold structure & deps”.
+<info added on 2025-06-26T20:08:13.014Z>
+• Establish project skeleton inside src/tubeatlas exactly per PRD 7.1.1
+  – models/  – services/  – repositories/  – api/ (with routes/ & middleware/)  – utils/  – config/
+  – add top-level tests/ directory mirroring package layout.
+
+• Extend pyproject.toml production deps (under [tool.poetry.dependencies]) with pinned versions:
+  fastapi ==0.104.*, uvicorn[standard], sqlalchemy ==2.*, aiosqlite, youtube-transcript-api, google-api-python-client, langchain, openai, celery[redis], redis, python-dotenv.
+
+• Add missing dev-only deps to [tool.poetry.group.dev.dependencies]: pytest-asyncio, coverage (black, flake8, mypy, isort, pre-commit already present).
+
+• Generate .env.template containing placeholders for OPENAI_API_KEY, DATABASE_URL, REDIS_URL, GOOGLE_API_KEY, YOUTUBE_API_KEY, CELERY_BROKER_URL, CELERY_RESULT_BACKEND, and other service credentials.
+
+• Create minimal FastAPI entrypoint at src/tubeatlas/main.py that loads environment variables with python-dotenv.
+
+• Run poetry add / poetry add --group dev to lock all versions, confirm resolver passes.
+
+• Commit all changes with message: “feat: scaffold project structure and dependencies”.
+</info added on 2025-06-26T20:08:13.014Z>
+<info added on 2025-06-26T20:27:40.384Z>
+• Subtask fully completed; scaffold matches PRD 7.1.1 exactly, including src/tubeatlas package with models/, services/, repositories/, api/(routes/, middleware/), utils/, config/, and mirrored tests/ layout, all initialised with __init__.py files.
+• Core skeleton files implemented: SQLAlchemy models (video.py, transcript.py, knowledge_graph.py); service, repository, and route stubs; supporting utils and config modules.
+• All production dependencies (FastAPI 0.104.*, uvicorn[standard], SQLAlchemy 2.*, aiosqlite, youtube-transcript-api, google-api-python-client, langchain, openai, celery[redis], redis, python-dotenv, pydantic, pydantic-settings, tiktoken) and dev deps (pytest-asyncio, coverage) added and locked via Poetry with no resolver conflicts.
+• Comprehensive .env.template generated covering OPENAI_API_KEY, DATABASE_URL, REDIS_URL, GOOGLE_API_KEY, YOUTUBE_API_KEY, CELERY_BROKER_URL, CELERY_RESULT_BACKEND, etc.
+• Minimal FastAPI entrypoint at src/tubeatlas/main.py loads environment via python-dotenv and starts without errors; settings module updated for pydantic-settings v2 compatibility and extra env var tolerance.
+• Verification: `poetry install` passes, application boots (TubeAtlas v2.0.0) exposing 20 registered endpoints, environment variables load correctly, and folder structure/unit tests import successfully.
+• Changes committed under “feat: scaffold project structure and dependencies”; subtask marked DONE.
+</info added on 2025-06-26T20:27:40.384Z>
+
+## 3. Configure Code Quality Tooling & Pre-commit Hooks [done]
+### Dependencies: 1.2
+### Description: Set up formatting, linting, type-checking and secret scanning with pre-commit.
+### Details:
+• Add `.pre-commit-config.yaml` containing hooks for black, isort, flake8, mypy, detect-secrets.
+• Configure `pyproject.toml` sections for black and isort; add `.flake8` and `mypy.ini` with sensible defaults (strict optional).
+• Install and run `pre-commit install`.
+• Update CI ignore paths (`.gitignore`) for `.mypy_cache`, `.pytest_cache`, `.tox`.
+• Commit with message “chore: code-quality & pre-commit”.
+<info added on 2025-06-27T10:00:59.973Z>
+Objective: Configure comprehensive code-quality tooling and pre-commit hooks for the TubeAtlas project.
+
+Implementation Plan:
+1. Create `.pre-commit-config.yaml` containing hooks for black, isort, flake8, mypy, and detect-secrets.
+2. Add black and isort sections to `pyproject.toml`; create `.flake8` and `mypy.ini` with strict type-checking settings.
+3. Extend `.gitignore` with `.mypy_cache`, `.pytest_cache`, and `.tox`.
+4. Install detect-secrets as a dev dependency (`poetry add --group dev detect-secrets`) and run `pre-commit install`.
+5. Execute `pre-commit run --all-files` and verify detect-secrets by staging a dummy secret.
+6. Commit with message: `chore: code-quality & pre-commit`.
+</info added on 2025-06-27T10:00:59.973Z>
+<info added on 2025-06-27T10:05:41.990Z>
+First-attempt outcomes & remediation plan:
+• Hooks executed: formatting (black/isort) and basic whitespace/EOF checks passed; config file validation for JSON/TOML/YAML succeeded.
+• Outstanding issues identified:
+  – mypy.ini regex pattern causes a syntax error → escape special chars correctly.
+  – Numerous flake8 violations under legacy/ and a handful of unused imports in newly scaffolded modules.
+  – detect-secrets baseline version mismatch.
+
+Immediate actions:
+1. Correct faulty regex in mypy.ini.
+2. Amend .flake8 to add legacy/ to the exclude list.
+3. Remove or suppress unused imports in src/ to satisfy flake8.
+4. Run detect-secrets scan --update and commit refreshed .secrets.baseline.
+
+Re-run `pre-commit run --all-files`; commit as “chore: fix lint & secrets baseline”.
+</info added on 2025-06-27T10:05:41.990Z>
+<info added on 2025-06-27T10:15:32.884Z>
+Outcome Summary:
+
+• Implemented and validated full pre-commit stack (black, isort, flake8, mypy, detect-secrets plus core formatting/validation hooks).
+• Added/updated configuration files: `pyproject.toml`, `.flake8`, `mypy.ini`, `.pre-commit-config.yaml`, `.secrets.baseline`, and extended `.gitignore`.
+• Refactored codebase to resolve flake8 and mypy issues, cleaned unused imports, fixed f-strings, and harmonized legacy path exclusions.
+• Ran `detect-secrets scan --update` to generate up-to-date baseline with legacy directory ignored.
+• Verified all hooks pass on full repository; pre-commit installed locally and documented for team.
+
+Final commit pushed:
+chore: code-quality, lint fixes & secrets baseline
+</info added on 2025-06-27T10:15:32.884Z>
+
+## 4. Dockerize Application and Compose Services [done]
+### Dependencies: 1.3
+### Description: Provide multi-stage Dockerfile, non-root runtime image, and docker-compose with API, Redis, and Celery worker.
+### Details:
+• Stage 1 (builder): use `python:3.11-slim`, copy project, run `poetry export --without-hashes` → pip install.
+• Stage 2 (runtime): copy from builder `/usr/local` and source; create user `appuser` (UID 1001), set `USER appuser`.
+• Expose 8000 and set `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]`.
+• `docker-compose.yml`: define `api` (build context), `redis` (official), `celery-worker` (same build context, command `celery -A app.worker worker -l info`). Link environment variables via `env_file: .env`.
+• Add volume for local dev reload if desired.
+• Commit with “feat: dockerization & compose”.
+<info added on 2025-06-27T10:43:43.968Z>
+Implementation Plan
+
+1. Multi-stage Dockerfile
+   • Stage 1 (builder): FROM python:3.11-slim, copy pyproject.toml/poetry.lock and src, run `poetry export --without-hashes -f requirements.txt -o /tmp/requirements.txt`, then `pip install --no-cache-dir -r /tmp/requirements.txt`.
+   • Stage 2 (runtime): FROM python:3.11-slim, copy `/usr/local` and project source from builder, create `appuser` (UID 1001/GID 1001), switch to non-root user, set `WORKDIR /app`.
+   • Health-check: `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]`, `EXPOSE 8000`.
+
+2. docker-compose.yml
+   • api: `build: .`, `ports: ["8000:8000"]`, `env_file: .env`, `depends_on: ["redis"]`, mount source volume only under development.
+   • redis: `image: redis:7-alpine`, `volumes: ["redis-data:/data"]`.
+   • celery-worker: `build: .`, `command: celery -A app.worker worker -l info`, `depends_on: ["redis","api"]`, reuse api environment.
+   • networks: default bridge; volumes: `redis-data`.
+
+3. Supporting files
+   • `.dockerignore`: `.venv`, `__pycache__`, `.pytest_cache`, `*.pyc`, `tests/`, `.git`, `docs/`, `*.log`.
+   • `.env.template`: add `REDIS_URL=redis://redis:6379/0`, `WORKERS_CONCURRENCY=4`.
+   • `docker-compose.override.yml`: bind-mount source, enable autoreload (`command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`).
+
+4. Validation
+   • `docker compose build` completes without cache errors.
+   • `docker compose up` boots api, redis, and celery-worker; confirm `/docs` responds 200.
+   • Ensure celery worker logs “Connected to redis://redis:6379/0” and processes sample task.
+
+5. Version control
+   • Stage, commit, and push with message: `feat: dockerization & compose`.
+</info added on 2025-06-27T10:43:43.968Z>
+<info added on 2025-06-27T10:51:51.271Z>
+Implementation progress:
+
+• Committed multi-stage Dockerfile (builder + runtime) with Python 3.11-slim, non-root appuser, proper PYTHONPATH, health-check CMD running uvicorn on :8000.
+• Added docker-compose.yml featuring api, redis 7-alpine (persistent volume), celery-worker, and optional flower monitoring; all services wired with health-checks, dependencies, and .env-based configuration.
+• Added docker-compose.override.yml for development: live-reload commands, source bind-mounts, debug flags, health-checks disabled for faster iteration.
+• Added supporting assets: optimized .dockerignore, complete .env.example, and data/ directory for SQLite storage.
+• Integrated Celery: new src/tubeatlas/config/celery_app.py, sample tasks module, CLI entry point, Flower dependency; main application imports the Celery app.
+• Linted/fixed Dockerfile keywords and removed deprecated compose version declarations.
+
+Known issue: CI pull of base images intermittently fails with “401 Unauthorized” from Docker Hub; configuration verified correct—retry once registry availability stabilises.
+
+Overall status: Docker configuration and service orchestration fully implemented and working locally.
+</info added on 2025-06-27T10:51:51.271Z>
+<info added on 2025-06-27T10:55:46.552Z>
+Subtask 1.4 completed.
+
+Summary of results:
+• Multi-stage Dockerfile implemented with security best practices and non-root appuser (UID 1001).
+• Docker Compose orchestration set up for API, Redis, and Celery services, each with health checks.
+• Development overrides enable live reload and source bind-mounts.
+• Celery background processing infrastructure added (config, tasks, CLI entry point).
+• Optimized .dockerignore, comprehensive .env.example, and persistent data directory included.
+• All 12 pre-commit hooks pass; type checks, linters, and security scans clean.
+• Documentation delivered with detailed task report and usage instructions.
+• Git commits pushed with conventional messages (hashes: 2addc7e, 5eaf953).
+
+Ready to proceed to Task 1.5: CI/CD pipeline implementation.
+</info added on 2025-06-27T10:55:46.552Z>
+
+## 5. Implement CI/CD Pipeline with GitHub Actions [done]
+### Dependencies: None
+### Description: Create workflow that lints, tests, builds, and pushes Docker images in alignment with NFR-4.* standards.
+### Details:
+• `.github/workflows/ci.yml` with jobs:
+  1. `lint`: set up Python, cache Poetry, run `pre-commit run --all-files`.
+  2. `test`: run `pytest -q --cov=app` and upload coverage report artifact.
+  3. `build`: login to `ghcr.io` using `GITHUB_TOKEN`, build Docker image with tag `${{ github.sha }}` and `latest`, push.
+• Use matrix for OS/Python versions if needed.
+• Enable branch protection rules requiring workflow success.
+• Document required secrets (`GHCR_USERNAME`, `GHCR_TOKEN`) in repo settings.
+• Commit with “ci: add GitHub Actions pipeline”.

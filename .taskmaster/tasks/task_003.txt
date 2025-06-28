@@ -1,0 +1,217 @@
+# Task ID: 3
+# Title: Develop YouTube Service & Transcript Management
+# Status: done
+# Dependencies: 2
+# Priority: medium
+# Description: Fulfil FR-1.*, FR-2.*, FR-3.* for downloading transcripts, metadata and persisting to DB.
+# Details:
+1. youtube_service.py:
+   • Use google-api-python-client to fetch playlistItems in pages (50/page) with exponential back-off.
+   • Implement `fetch_channel_videos(channel_url, include_shorts, max_videos)` returning generator of metadata dicts.
+2. transcript_service.py:
+   • Use youtube-transcript-api (or fallback to Google CC) to download transcripts (`list_transcripts` then `fetch` per language).
+   • Map transcript availability status (available, none, disabled_by_creator).
+   • Compute token counts via utils/token_counter.py (to be created in Task-4).
+   • Insert/Update rows via VideoRepository & TranscriptRepository (upsert on video_id).
+   • Support incremental mode: stop when `video_id` already exists unless `update_existing`.
+3. Add Celery task shells `download_channel(channel_url)` and `download_video(video_url)` that enqueue work (full logic completed after Task-6).
+4. Implement robust error handling (custom exceptions) with retries (≥3) for API quota errors.
+5. Store raw JSON responses for debugging in `/data/raw/<video_id>.json`.
+
+
+# Test Strategy:
+• Mock Google & transcript APIs with `respx` returning deterministic data.
+• Unit tests check: 1) video row persisted, 2) transcript row persisted with correct token counts, 3) incremental update skips existing.
+• Integration test: process small public channel (≤3 videos) live (marked `@pytest.mark.external`).
+• Error test: supply video without transcript ⇒ status set to `unavailable`.
+
+# Subtasks:
+## 1. Create YouTube API client with pagination & exponential back-off [done]
+### Dependencies: None
+### Description: Build a reusable helper in youtube_service.py that authenticates via google-api-python-client, requests playlistItems in pages of 50, and transparently retries with exponential back-off on transient HTTP / quota errors.
+### Details:
+• Instantiate build('youtube','v3',developerKey=...) once and reuse.
+• Implement _paged_request(endpoint, params) yielding items.
+• Use backoff library or manual sleep with jitter: wait=min(2**attempt, 64).
+• Raise custom QuotaExceededError or TransientAPIError after ≥3 failed attempts.
+• Return raw JSON per page for later storage.
+<info added on 2025-06-27T16:15:18.024Z>
+Implementation completed.
+
+• Finished YouTube API client with _execute_with_retry() featuring exponential back-off (wait = min(2**attempt, max_wait) ±25 % jitter), quota-aware handling (403/quota), transient retry (429, 5xx) and max wait cap (64 s).
+• Added custom exceptions QuotaExceededError and TransientAPIError.
+• Implemented _paged_request() that transparently handles pageToken pagination and yields raw JSON pages.
+• Introduced cached, thread-safe youtube_client property for single build('youtube','v3') instantiation.
+• Integrated detailed logging and type-hinted, well-documented code following project conventions.
+• Added 14 unit tests (successful paths, retries, quota, pagination) using mocks; all pass.
+</info added on 2025-06-27T16:15:18.024Z>
+
+## 2. Implement fetch_channel_videos generator [done]
+### Dependencies: 3.1
+### Description: Write fetch_channel_videos(channel_url, include_shorts, max_videos) in youtube_service.py that yields normalized metadata dicts for each video.
+### Details:
+• Resolve channel_url → uploads playlist ID via channels().list.
+• Iterate playlistItems via helper from Subtask 1.
+• Filter out shorts unless include_shorts.
+• Stop after max_videos.
+• Normalize fields: video_id, title, published_at, duration, description, etc.
+• Yield dict and optionally raw_json.
+• Return a generator (yield one by one).
+<info added on 2025-06-27T16:21:38.938Z>
+• Batch video IDs from playlistItems.list into chunks of ≤50 and call videos().list(part='snippet,contentDetails') to hydrate metadata (≈8 quota units per batch).
+• Detect Shorts with a three-way heuristic: snippet.categoryId == '42', parsed duration ≤ 60 s, or presence of “#shorts” (case-insensitive) in title/description; exclude unless include_shorts=True.
+• Skip or log playlist entries that resolve to private or deleted videos (videos().list returns no items) while preserving correct pagination and max_videos counting.
+• Track and expose estimated quota consumption (~0.18 units per video; ~180 units/1000 videos) and support optional sleep_between_calls for back-off on 403 rate-limit errors.
+</info added on 2025-06-27T16:21:38.938Z>
+<info added on 2025-06-27T16:25:35.304Z>
+• Completed fetch_channel_videos() generator implementation:
+  – Resolves /channel/, @handle, /user/, and /c/ URLs to the uploads playlist
+  – Streams per-video dicts with 20+ normalized fields (e.g., view_count, like_count, tags, duration_seconds) parsed with isodate
+  – Batches ID hydration in groups of 50 via videos().list to sustain ~0.18 quota units per video
+  – Applies three-way Shorts filter (categoryId = 42, duration ≤ 60 s, “#shorts” in title/description) gated by include_shorts
+  – Skips private/deleted items without breaking pagination; enforces max_videos with early exit
+
+• Added dependency: isodate for ISO-8601 duration parsing
+
+• Test suite: 36 unit/integration tests covering URL resolution, pagination, batching, shorts detection, filtering, limits, and error handling (API failures, rate limits)
+</info added on 2025-06-27T16:25:35.304Z>
+
+## 3. Develop TranscriptService to download transcripts with fallback logic [done]
+### Dependencies: 3.2
+### Description: Create transcript_service.py providing list_transcripts & fetch per language using youtube-transcript-api, falling back to Google CC if necessary, and returning structured transcript data with availability status.
+### Details:
+• For each video_id call YouTubeTranscriptApi.list_transcripts.
+• Choose preferred language (en, then auto-en, else first available).
+• If API raises NoTranscriptFound or Disabled, set status none or disabled_by_creator.
+• Standardize return: {video_id, language, status, segments: [ { start, text, duration } ] }.
+<info added on 2025-06-27T17:10:59.802Z>
+Implemented get_transcript in TranscriptService to wrap youtube_transcript_api calls and centralize transcript retrieval logic.
+• Fallback order: explicit preferred language (defaults to "en"), any manual transcript, then first available.
+• Exception handling maps to statuses:
+  – TranscriptsDisabled → "disabled"
+  – NoTranscriptFound → "not_found"
+  – Other API errors → "fetch_error"
+  – Successful fetch → "success"
+• Returns a typed Transcript dict: { video_id, status, language, segments | None }.
+• TranscriptSegment and Transcript TypedDicts added for static-type support.
+• extract_transcript now delegates to get_transcript, removing duplicate logic.
+</info added on 2025-06-27T17:10:59.802Z>
+
+## 4. Integrate token counting into TranscriptService [done]
+### Dependencies: 3.3
+### Description: After Task-4 provides utils/token_counter.py, call it to compute token_count & segment_token_counts for each transcript.
+### Details:
+• Import token_counter.count_tokens(text).
+• For each segment and full transcript compute counts.
+• Add fields token_count, segment_tokens to transcript dict.
+<info added on 2025-06-27T17:34:51.012Z>
+• Implemented `src/tubeatlas/utils/token_counter.py` with a `count_tokens` helper powered by the `tiktoken` library.
+• Refactored `TranscriptService.get_transcript` to invoke `count_tokens`, adding `token_count` to each `TranscriptSegment` and `total_token_count` to the full `Transcript`.
+• Extended `Transcript` and `TranscriptSegment` `TypedDict`s to include the new token-count fields.
+• Added unit tests for `token_counter` and updated `TranscriptService` tests to assert correct token counts; all tests pass.
+</info added on 2025-06-27T17:34:51.012Z>
+
+## 6. Add centralized error handling & retry decorators [done]
+### Dependencies: 3.5
+### Description: Create exceptions.py with custom errors (QuotaExceededError, TransientAPIError, TranscriptDownloadError). Implement @retry_on_exception decorator (≥3 attempts) used across services.
+### Details:
+• Decorator inspects exception type, sleeps exponentially, re-raises after max.
+• Apply to API/network methods in youtube_service and transcript_service.
+• Log retries via standard logging.
+<info added on 2025-06-27T19:01:52.564Z>
+• TranscriptService no longer raises on transcript fetch failure; it again returns {'fetch_error': …}. Accordingly, the retry decorator was removed from its fetch path to preserve existing call‐site handling.
+• process_channel_transcripts now transparently accepts both synchronous and asynchronous generators; an internal _iterate helper drives consumption and halts correctly when incremental mode meets previously-seen video_id.
+• retry utility fixed: jitter is now interpreted as a maximum random offset (0 ≤ rand ≤ jitter) instead of a multiplier; parameter is fully type-checked.
+• Added exhaustive unit coverage in tests/unit/test_retry.py for synchronous and asynchronous flows, verifying back-off sequence, jitter range, exception propagation, and max-attempt behaviour.
+• All 84 tests (plus the new retry suite) pass locally; CI green and branch ready for merge.
+</info added on 2025-06-27T19:01:52.564Z>
+
+## 7. Create Celery task shells for download_channel and download_video [done]
+### Dependencies: 3.6
+### Description: Add tasks.py containing Celery shared_task functions that enqueue channel/video downloads, wiring to service methods but leaving heavy processing for later Task-6.
+### Details:
+• Define @shared_task(bind=True, max_retries=3) download_channel(channel_url, include_shorts=False, max_videos=None, update_existing=False).
+• Inside, call fetch_channel_videos and TranscriptService but without summarization.
+• Same for download_video(video_url).
+• Use apply_async with acks_late and countdown for retry delays.
+<info added on 2025-06-28T06:30:14.258Z>
+Implementation plan and action items to complete this sub-task:
+
+• Add required imports in src/tubeatlas/tasks.py:
+  – from tubeatlas.config.celery_app import celery_app
+  – from tubeatlas.config.database import async_session_factory
+  – from tubeatlas.services.youtube import YouTubeService
+  – from tubeatlas.services.transcript import TranscriptService
+  – from tubeatlas.repositories.video import VideoRepository
+  – from tubeatlas.repositories.transcript import TranscriptRepository
+  – from sqlalchemy.exc import SQLAlchemyError
+  – from urllib.parse import urlparse, parse_qs
+  – import asyncio, logging
+
+• Helper: define get_async_session() returning async_session_factory() context-manager for cleaner use inside the tasks.
+
+• Task skeletons to add below existing placeholders:
+
+@celery_app.shared_task(bind=True, max_retries=3, acks_late=True)
+def download_channel(self, channel_url, include_shorts=False, max_videos=None, update_existing=False):
+    """
+    Celery task that fetches all (or limited) videos for a channel, pulls transcripts,
+    and persists both video and transcript records via upsert semantics.
+    Returns: dict with counts {processed, succeeded, failed}
+    """
+    # body to be implemented per steps described below
+
+@celery_app.shared_task(bind=True, max_retries=3, acks_late=True)
+def download_video(self, video_url):
+    """
+    Celery task that fetches a single video (by URL or ID), pulls its transcript,
+    and persists the data.
+    Returns: dict with status and video_id
+    """
+
+• Inside each task:
+  1. Wrap logic in try/except. On recoverable error call self.retry(exc=e, countdown=2 ** self.request.retries).
+  2. Open async DB session with `async with get_async_session() as session, session.begin():`
+  3. Instantiate YouTubeService(session) and TranscriptService(session).
+  4. For channel task:
+     – async for video_meta in YouTubeService.fetch_channel_videos(...):
+         • if not include_shorts and video_meta["is_short"]: continue
+         • transcript = await TranscriptService.get_transcript(video_meta["video_id"])
+         • await VideoRepository(session).upsert(video_meta, update_existing)
+         • await TranscriptRepository(session).upsert(video_meta["video_id"], transcript)
+  5. For single video task:
+     – Extract video_id via urlparse / parse_qs if needed.
+     – Fetch video_meta = await YouTubeService.fetch_video_metadata(video_id)
+     – Same upsert + transcript flow as above.
+  6. Aggregate and return summary dict at the end of the task.
+
+• Ensure all awaits are executed inside `asyncio.run()` wrapper because Celery executes synchronously:
+    result = asyncio.run(_async_impl(...))
+
+• Configure task routing/queue in celery_app.py (e.g., CELERY_TASK_ROUTES) so download_* land in “youtube” queue.
+
+• Add logger = logging.getLogger(__name__) and emit info/debug for start, per-video success, retries, and final summary.
+
+Deliverables: full task implementations in src/tubeatlas/tasks.py and updated Celery config.
+</info added on 2025-06-28T06:30:14.258Z>
+<info added on 2025-06-28T06:34:55.743Z>
+Implementation completed:
+
+• Added fully functional download_channel and download_video tasks with proper Celery decorators, async execution via asyncio.run, and exponential-backoff retry logic.
+• Integrated YouTubeService, TranscriptService, VideoRepository, and TranscriptRepository with transactional AsyncSessionLocal handling and upsert semantics.
+• Implemented robust error handling for QuotaExceededError and TransientAPIError, plus detailed structured logging.
+• Configured task routing in celery_app so both tasks are sent to the “youtube” queue; names now match src.tubeatlas.tasks.*.
+• Added comprehensive unit tests (8 total) covering registration, success paths, retries, and routing—​all passing.
+</info added on 2025-06-28T06:34:55.743Z>
+
+## 8. Persist raw JSON responses for debugging [done]
+### Dependencies: 3.7
+### Description: Store every raw API response to /data/raw/<video_id>.json during processing for later offline inspection.
+### Details:
+• Ensure /data/raw directory exists (os.makedirs, exist_ok=True).
+• In youtube_service fetch loop, after receiving full metadata JSON, dump to file using json.dump with indent=2.
+• Filename based on video_id; overwrite if re-downloaded.
+• Handle IOError with logging but don’t abort processing.
+<info added on 2025-06-28T12:05:40.160Z>
+Implementation completed. Added persistence layer saving each raw YouTube metadata response to data/raw/{video_id}.json via new _persist_raw_response() method, invoked from _normalize_video_metadata(). Raw data directory is auto-created in constructor with os.makedirs(..., exist_ok=True). Files are dumped using json.dump(..., indent=2, ensure_ascii=False) and overwrite on re-download. IOError is caught and logged as warning without stopping processing. Three new unit tests cover success path, IOError logging, and end-to-end integration; all 39 tests pass.
+</info added on 2025-06-28T12:05:40.160Z>

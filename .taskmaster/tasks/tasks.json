@@ -57,9 +57,7 @@
             "id": 5,
             "title": "Implement CI/CD Pipeline with GitHub Actions",
             "description": "Create workflow that lints, tests, builds, and pushes Docker images in alignment with NFR-4.* standards.",
-            "dependencies": [
-              4
-            ],
+            "dependencies": [],
             "details": "• `.github/workflows/ci.yml` with jobs:\n  1. `lint`: set up Python, cache Poetry, run `pre-commit run --all-files`.\n  2. `test`: run `pytest -q --cov=app` and upload coverage report artifact.\n  3. `build`: login to `ghcr.io` using `GITHUB_TOKEN`, build Docker image with tag `${{ github.sha }}` and `latest`, push.\n• Use matrix for OS/Python versions if needed.\n• Enable branch protection rules requiring workflow success.\n• Document required secrets (`GHCR_USERNAME`, `GHCR_TOKEN`) in repo settings.\n• Commit with “ci: add GitHub Actions pipeline”.",
             "status": "done",
             "testStrategy": "Push to a feature branch; verify workflow runs all jobs successfully, Docker image appears in GitHub Container Registry, and tags are correct."
@@ -126,8 +124,7 @@
             "title": "Integrate Healthcheck Middleware and Startup Hooks into FastAPI",
             "description": "Add middleware/endpoints to verify DB connectivity and ensure tables are created at application startup.",
             "dependencies": [
-              1,
-              4
+              1
             ],
             "details": "• In main.py, add @app.on_event('startup') async def db_startup(): await create_all() and test a simple SELECT 1.\n• Implement middleware catching DB exceptions and transforming into 503 errors.\n• Add /health/db endpoint that opens an AsyncSession, runs SELECT 1, and returns 200 OK if success.\n• Register middleware and endpoint with FastAPI.\n<info added on 2025-06-27T15:46:50.484Z>\n• Implementation verified: lifespan-based startup/shutdown, health middleware, and `/health` endpoints are all live and tested (Task 2.5 COMPLETE).\n</info added on 2025-06-27T15:46:50.484Z>",
             "status": "done",
@@ -145,7 +142,7 @@
         "dependencies": [
           2
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -190,17 +187,6 @@
             "testStrategy": "Stub token_counter; verify counts stored."
           },
           {
-            "id": 5,
-            "title": "Persist video & transcript data with upsert and incremental mode",
-            "description": "Use VideoRepository and TranscriptRepository to upsert records; stop processing when an existing video is encountered unless update_existing=True.",
-            "dependencies": [
-              4
-            ],
-            "details": "• Implement repository.upsert(data, conflict_field='video_id').\n• In fetch_channel_videos consumer loop, check repository.exists(video_id) to decide early exit.\n• Wrap DB ops in transaction per video to avoid partial writes.",
-            "status": "done",
-            "testStrategy": "SQLite or in-memory DB; insert duplicate video; ensure upsert updates not duplicates; incremental stop verified."
-          },
-          {
             "id": 6,
             "title": "Add centralized error handling & retry decorators",
             "description": "Create exceptions.py with custom errors (QuotaExceededError, TransientAPIError, TranscriptDownloadError). Implement @retry_on_exception decorator (≥3 attempts) used across services.",
@@ -236,19 +222,6 @@
         ]
       },
       {
-        "id": 4,
-        "title": "Implement Token Counting & Advanced Chunking Utilities",
-        "description": "Provide utilities supporting FR-4.*, FR-5.* including intelligent chunking for >1M tokens.",
-        "details": "1. utils/token_counter.py:\n   • Wrap tiktoken + google-palm tokenizers.\n   • `count_tokens(text, model)` returns int.\n   • Cache encoding instances.\n2. utils/chunking.py:\n   • Implement `semantic_chunk(text)` using sentence-transformers `all-mpnet-base-v2` to split on topic shifts.\n   • Provide `speaker_chunk`, `timestamp_chunk` helpers.\n   • `hierarchical_chunk(text)` returns nested list as per 6.3.2.\n   • Overlap parameter + max_tokens arg.\n3. Smart summarizer: `summarize_large(text, level)` calling OpenAI GPT-3.5 if >N tokens.\n4. Performance safeguards: stream processing using generators to avoid loading full transcript.\nPseudo-code:\n```python\ndef hierarchical_chunk(text:str, max_tokens:int=1000, overlap:int=100):\n    for segment in semantic_chunk(text):\n        if count_tokens(segment)>max_tokens:\n            yield from hierarchical_chunk(segment,max_tokens)\n        else:\n            yield segment\n```\n",
-        "testStrategy": "• Unit tests: feed 10k-token dummy text -> ensure ≤ (len(text)/max_tokens)+5 chunks.\n• Verify overlap correctness (first 10 tokens identical across boundaries).\n• Token counting parity: compare OpenAI API usage vs utility output (±1%).\n• Benchmarks: chunk 1M-token file in <30s on laptop.",
-        "priority": "medium",
-        "dependencies": [
-          3
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
         "id": 5,
         "title": "Build Knowledge Graph Generation Pipeline",
         "description": "Generate entity-relationship graphs from transcripts via LangChain + OpenAI, store results.",
@@ -257,7 +230,7 @@
         "priority": "medium",
         "dependencies": [
           3,
-          4
+          "4"
         ],
         "status": "pending",
         "subtasks": []
@@ -298,7 +271,6 @@
         "testStrategy": "• Unit: given synthetic embeddings, query returns expected top-k chunk IDs.\n• End-to-end: ask factual question over small video, verify answer contains source timestamps.\n• Token budget test: inject long query; ensure assembled context tokens ≤ request limit.\n• Load test: 100 parallel chat sessions keep latency ≤2s avg (Success Metric).",
         "priority": "medium",
         "dependencies": [
-          4,
           5,
           6,
           7
@@ -331,7 +303,6 @@
           1,
           2,
           3,
-          4,
           5,
           6,
           7,
@@ -340,11 +311,183 @@
         ],
         "status": "pending",
         "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Persist video & transcript data with upsert and incremental mode",
+        "description": "Use VideoRepository and TranscriptRepository to upsert records; stop processing when an existing video is encountered unless update_existing=True.",
+        "details": "• Implement repository.upsert(data, conflict_field='video_id').\n• In fetch_channel_videos consumer loop, check repository.exists(video_id) to decide early exit.\n• Wrap DB ops in transaction per video to avoid partial writes.",
+        "status": "done",
+        "dependencies": [
+          3
+        ],
+        "priority": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Implement Modular RAG Foundation with Multi-Strategy Chunking and FAISS Vector Store",
+        "description": "Create a reusable Retrieval-Augmented Generation core containing token counter, pluggable chunkers, OpenAI embedder, FAISS vector store, benchmarking utilities and streaming ingest pipeline.",
+        "details": "1. Package layout\n   • rag/__init__.py\n   • rag/token_counter.py\n   • rag/chunking/base.py  (ChunkerInterface ABC)\n   • rag/chunking/fixed.py (FixedLengthChunker)\n   • rag/chunking/semantic.py (SemanticChunker)\n   • rag/embedding/base.py (EmbedderInterface ABC)\n   • rag/embedding/openai.py (OpenAIEmbedder)\n   • rag/vector_store/faiss_store.py (FaissVectorStore)\n   • rag/registry.py (singleton registry for chunkers/embedders/vector stores)\n   • rag/pipeline.py (end-to-end ingest/query helpers)\n   • rag/benchmarks/benchmark.py (+ CLI entry-point `poetry run rag-bench`)\n\n2. TokenCounter\n   • Use tiktoken.encoding_for_model(model_name) with LRU cache (functools.lru_cache(maxsize=8))\n   • Static method count(text: str, model: str = \"gpt-3.5-turbo\") -> int\n   • Guard against >100K characters (chunk iterate)\n\n3. Chunkers\n   a) ChunkerInterface: abstract chunk(text: str) -> list[Chunk]; each Chunk dataclass has id, text, start_idx, end_idx, token_count\n   b) FixedLengthChunker(length_tokens=512, overlap_tokens=64)\n      – Slide window using TokenCounter, keep overlap, preserve sentence boundaries if within ±20 tokens\n   c) SemanticChunker(similarity_threshold=0.92)\n      – Split by sentences (nltk or spacy), then greedily merge until sentence-vector cosine similarity (SentenceTransformers all-MiniLM) between last and candidate < threshold.\n   d) Register both in registry.register_chunker(\"fixed\", FixedLengthChunker)\n\n4. Embeddings Layer\n   • EmbedderInterface.embed_texts(texts: list[str], model: str, batch_size: int = 100) -> list[list[float]]\n   • OpenAIEmbedder implements interface, respects 2048 input token limit, automatic chunking of long texts per OpenAI spec.\n   • Handles rate-limit via exponential back-off (tenacity).\n\n5. Vector Store (FAISS)\n   • build_index(chunks: list[Chunk]) → store embeddings + metadatas\n   • similarity_search(query: str, k=5, **filters) returns list[(Chunk, score)]\n   • persist(path: Path) & load(path: Path)\n   • Supports incremental `add(chunks)` maintaining ID mapping.\n\n6. Streaming Long Transcript Handling\n   • `rag.pipeline.stream_ingest(transcript_iterable, chunker_name=\"fixed\", batch_size=500)`\n   • Reads transcript rows lazily (via async generator from Task-3 service), chunks & embeds in memory-bounded batches (<512MB).\n\n7. Benchmark & Evaluation\n   • CLI allows: `rag-bench --transcript-id 123 --chunkers fixed semantic --queries queries.json --k 5`\n   • Measures: chunking time, embedding time, retrieval accuracy (precision@k against ground-truth answer spans), memory usage.\n   • Results output CSV + pretty table.\n\n8. Registry & Pipeline\n   • Simple dict-based registry for chunkers/embedders/vector stores.\n   • `rag.pipeline.retrieve(question: str, transcript_ids: list[int], k=5)` orchestrates fetch→chunk→embed→search returning sources.\n\n9. Documentation & Typing\n   • Every public method fully typed; generate mkdocs page with UML diagram.\n\n10. Code quality gates: mypy --strict, black, flake8; all added to pre-commit (Task-1).",
+        "status": "in-progress",
+        "dependencies": [
+          1,
+          3
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Package Structure Scaffolding",
+            "description": "Generate initial project folder hierarchy and tooling configuration.",
+            "dependencies": [],
+            "details": "Create src/ directory with __init__.py, set up poetry/pyproject.toml, configure virtual env, define namespaces (chunkers, embedders, stores, pipelines, utils), add basic README and CI skeleton.\n<info added on 2025-06-28T19:12:08.470Z>\nTokenCounter utility refactored and consolidated:\n- Enhanced `src/tubeatlas/utils/token_counter.py` with encode/decode, token-limit truncation, LRU-cached counting, CLI entrypoint, and support for >100 K-char streams.\n- Removed redundant `src/tubeatlas/rag/token_counter.py`; all RAG chunkers/embedders now import from `tubeatlas.utils`.\n- Updated `src/tubeatlas/rag/__init__.py` to re-export `TokenCounter`; fixed tests and tiktoken dependency shim.\n- 24 unit tests pass and RAG chunking/embedding pipelines operate with the new centralized utility.\n</info added on 2025-06-28T19:12:08.470Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "TokenCounter Utility",
+            "description": "Implement utility to count model‐specific tokens in text.",
+            "dependencies": [
+              1
+            ],
+            "details": "Support OpenAI tiktoken, fallback regex; expose count(text, model) API; integrate caching; add simple CLI demo.\n<info added on 2025-06-28T18:58:46.522Z>\nImplementation completed:\n\n- TokenCounter class provides static count(text, model='gpt-3.5-turbo') plus encode, decode, truncate helpers.  \n- LRU-cached (maxsize = 8) tiktoken encoder, automatic chunking for >100 K chars, fallback to cl100k_base, round-trip consistency.  \n- CLI (`python -m tubeatlas.rag.token_counter`) with stdin/arg/file input, --model, --encode, --truncate flags and detailed help.  \n- 24-case pytest suite exercises core API, CLI, caching and performance; all tests green.  \n- tiktoken >=0.7.0 already in dependencies; utility integrates with other RAG modules.  \n\nTokenCounter is production-ready—subtask can be closed.\n</info added on 2025-06-28T18:58:46.522Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "BaseChunker Abstract Class",
+            "description": "Define shared interface and behavior for all chunkers.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Abstract methods chunk(text), metadata handling, use TokenCounter for size enforcement, register via entrypoints for extensibility.\n<info added on 2025-06-28T19:01:21.642Z>\nImplementation completed during phase 4.1:\n\n• `ChunkerInterface` (src/tubeatlas/rag/chunking/base.py) provides abstract `chunk` and `get_config` methods, input validation, and metadata utilities.  \n• `Chunk` dataclass (id, text, indices, token_count, metadata) with `Chunk.create()` factory and automatic UUIDs.  \n• Seamless `TokenCounter` integration for model-aware token sizing and enforcement.  \n• Automatic registration through `RAGRegistry`; factory access via `registry.create_chunker(name, **kwargs)`.  \n• Verified by import, registry listing, and implementation checks (FixedLengthChunker, SemanticChunker).\n</info added on 2025-06-28T19:01:21.642Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "FixedSizeChunker Implementation",
+            "description": "Concrete chunker that splits text by fixed token length.",
+            "dependencies": [
+              3
+            ],
+            "details": "Configurable window & overlap, efficiency optimizations, unit tests with various languages.\n<info added on 2025-06-28T19:01:45.930Z>\nFixedLengthChunker has been fully implemented and integrated:\n\n• Class `FixedLengthChunker` added in `src/tubeatlas/rag/chunking/fixed.py` with token-based sliding-window chunking, configurable `length_tokens` and `overlap_tokens`, sentence-boundary preservation, and metadata enrichment.  \n• Utilises `TokenCounter` for accurate token counts and includes performance optimisations for character-to-token estimation.  \n• Runtime options: `length_tokens` (default 512), `overlap_tokens` (64), `model` (default \"gpt-3.5-turbo\"), `preserve_sentences`, and `sentence_boundary_tolerance`.  \n• Registered as `\"fixed\"` in `RAGRegistry`; instances created via `registry.create_chunker(\"fixed\", …)`.  \n• Verification: import, registry creation, and functional chunking tests all pass across multilingual inputs.\n\nSubtask can be marked complete.\n</info added on 2025-06-28T19:01:45.930Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "SemanticChunker Implementation",
+            "description": "Chunker that uses heuristics/LLM to split on semantic boundaries.",
+            "dependencies": [
+              3
+            ],
+            "details": "Leverage embeddings similarity or markdown headings, fallback to FixedSizeChunker, performance benchmarks.\n<info added on 2025-06-28T19:02:12.485Z>\nImplementation complete: SemanticChunker\n\n• Location: src/tubeatlas/rag/chunking/semantic.py  \n• Strategy: sentence-level semantic grouping via SentenceTransformers embeddings (default model: all-MiniLM-L6-v2)  \n• Configurable parameters:  \n  – similarity_threshold (default 0.92)  \n  – model_name (SentenceTransformer)  \n  – max_chunk_tokens (1024) / min_chunk_tokens (50)  \n  – token_model for token counting (default gpt-3.5-turbo)  \n• Logic: compute sentence embeddings, maintain running centroid; start new chunk when cosine similarity < threshold or token limits reached; enforces hard max/min token constraints  \n• Performance: lazy model load; graceful degradation if sentence-transformers absent (clear error message, fallback available)  \n• Registry: registered as \"semantic\"; instantiate via registry.create_chunker(\"semantic\", **kwargs)  \n• Tests passed: import, registry creation, dependency check\n</info added on 2025-06-28T19:02:12.485Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Embedder Interface & OpenAI Implementation",
+            "description": "Create pluggable embedding interface and initial OpenAIEmbedder.",
+            "dependencies": [
+              1
+            ],
+            "details": "Abstract embed(texts) -> nd.array, batching, rate-limit handling, environment configuration for API keys.\n<info added on 2025-06-28T19:03:45.199Z>\nEmbedderInterface (src/tubeatlas/rag/embedding/base.py) and OpenAIEmbedder (src/tubeatlas/rag/embedding/openai.py) fully implemented:\n• EmbedderInterface defines abstract methods (embed_texts, embed_text, get_embedding_dimension, get_max_input_length, get_config), validation helpers, chunk_long_text utility, and comprehensive type-hinted error handling.\n• OpenAIEmbedder supports text-embedding-3-small/large and text-embedding-ada-002, with configurable batching (default 100), exponential-backoff rate-limit retries, automatic chunking and average-combination of long texts, cost estimation, and env-based API key management.\n• TokenCounter integration enables token-aware preparation; model specs include token limits and embedding dimensions.\n• Registered with RAGRegistry (registry.create_embedder(\"openai\", **kwargs)); import and API tests pass.\n• Production-ready, with logging, configuration management, and full error handling in place.\n</info added on 2025-06-28T19:03:45.199Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "FAISS Vector Store Wrapper",
+            "description": "Wrapper around FAISS for storing and querying embeddings.",
+            "dependencies": [
+              6
+            ],
+            "details": "Support index creation, add/update/delete vectors, similarity search, persistence to disk, GPU toggle.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Registry Pattern Implementation",
+            "description": "Provide central registry for dynamic discovery of pluggable components.",
+            "dependencies": [
+              3,
+              6,
+              7
+            ],
+            "details": "Singleton registry class, entrypoint loading, duplicate detection, factory helpers.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 9,
+            "title": "Streaming Ingest Pipeline",
+            "description": "Pipeline that ingests documents, chunks them, embeds, and stores vectors.",
+            "dependencies": [
+              4,
+              5,
+              7,
+              8
+            ],
+            "details": "Implement async generator, back-pressure handling, progress logging, failure recovery.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 10,
+            "title": "Retrieval Pipeline Orchestration",
+            "description": "Query-time path from raw question to ranked document chunks.",
+            "dependencies": [
+              6,
+              7,
+              8
+            ],
+            "details": "Embed query, search FAISS, rank & format results, configurable top-k, similarity threshold.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 11,
+            "title": "Benchmark CLI",
+            "description": "Command-line tool to evaluate ingest/retrieval performance and accuracy.",
+            "dependencies": [
+              9,
+              10
+            ],
+            "details": "Subcommands for throughput, latency, recall@k; JSON/CSV output; plotting hooks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 12,
+            "title": "Quality, Typing, Docs & Test Suite",
+            "description": "Establish rigorous quality gates, documentation and testing.",
+            "dependencies": [
+              2,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "details": "Integrate mypy, ruff, black; Sphinx docs with autodoc; 90%+ coverage pytest suite; GitHub Actions workflow.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-28T12:05:44.962Z",
+      "updated": "2025-06-28T19:03:51.311Z",
       "description": "Tasks for master context"
     }
   }

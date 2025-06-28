@@ -1,0 +1,63 @@
+# Task ID: 4
+# Title: Implement Modular RAG Foundation with Multi-Strategy Chunking and FAISS Vector Store
+# Status: pending
+# Dependencies: 1, 3
+# Priority: medium
+# Description: Create a reusable Retrieval-Augmented Generation core containing token counter, pluggable chunkers, OpenAI embedder, FAISS vector store, benchmarking utilities and streaming ingest pipeline.
+# Details:
+1. Package layout
+   • rag/__init__.py
+   • rag/token_counter.py
+   • rag/chunking/base.py  (ChunkerInterface ABC)
+   • rag/chunking/fixed.py (FixedLengthChunker)
+   • rag/chunking/semantic.py (SemanticChunker)
+   • rag/embedding/base.py (EmbedderInterface ABC)
+   • rag/embedding/openai.py (OpenAIEmbedder)
+   • rag/vector_store/faiss_store.py (FaissVectorStore)
+   • rag/registry.py (singleton registry for chunkers/embedders/vector stores)
+   • rag/pipeline.py (end-to-end ingest/query helpers)
+   • rag/benchmarks/benchmark.py (+ CLI entry-point `poetry run rag-bench`)
+
+2. TokenCounter
+   • Use tiktoken.encoding_for_model(model_name) with LRU cache (functools.lru_cache(maxsize=8))
+   • Static method count(text: str, model: str = "gpt-3.5-turbo") -> int
+   • Guard against >100K characters (chunk iterate)
+
+3. Chunkers
+   a) ChunkerInterface: abstract chunk(text: str) -> list[Chunk]; each Chunk dataclass has id, text, start_idx, end_idx, token_count
+   b) FixedLengthChunker(length_tokens=512, overlap_tokens=64)
+      – Slide window using TokenCounter, keep overlap, preserve sentence boundaries if within ±20 tokens
+   c) SemanticChunker(similarity_threshold=0.92)
+      – Split by sentences (nltk or spacy), then greedily merge until sentence-vector cosine similarity (SentenceTransformers all-MiniLM) between last and candidate < threshold.
+   d) Register both in registry.register_chunker("fixed", FixedLengthChunker)
+
+4. Embeddings Layer
+   • EmbedderInterface.embed_texts(texts: list[str], model: str, batch_size: int = 100) -> list[list[float]]
+   • OpenAIEmbedder implements interface, respects 2048 input token limit, automatic chunking of long texts per OpenAI spec.
+   • Handles rate-limit via exponential back-off (tenacity).
+
+5. Vector Store (FAISS)
+   • build_index(chunks: list[Chunk]) → store embeddings + metadatas
+   • similarity_search(query: str, k=5, **filters) returns list[(Chunk, score)]
+   • persist(path: Path) & load(path: Path)
+   • Supports incremental `add(chunks)` maintaining ID mapping.
+
+6. Streaming Long Transcript Handling
+   • `rag.pipeline.stream_ingest(transcript_iterable, chunker_name="fixed", batch_size=500)`
+   • Reads transcript rows lazily (via async generator from Task-3 service), chunks & embeds in memory-bounded batches (<512MB).
+
+7. Benchmark & Evaluation
+   • CLI allows: `rag-bench --transcript-id 123 --chunkers fixed semantic --queries queries.json --k 5`
+   • Measures: chunking time, embedding time, retrieval accuracy (precision@k against ground-truth answer spans), memory usage.
+   • Results output CSV + pretty table.
+
+8. Registry & Pipeline
+   • Simple dict-based registry for chunkers/embedders/vector stores.
+   • `rag.pipeline.retrieve(question: str, transcript_ids: list[int], k=5)` orchestrates fetch→chunk→embed→search returning sources.
+
+9. Documentation & Typing
+   • Every public method fully typed; generate mkdocs page with UML diagram.
+
+10. Code quality gates: mypy --strict, black, flake8; all added to pre-commit (Task-1).
+
+# Test Strategy:

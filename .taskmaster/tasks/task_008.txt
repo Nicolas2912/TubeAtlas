@@ -1,0 +1,22 @@
+# Task ID: 8
+# Title: Implement Chat & RAG Query Service
+# Status: pending
+# Dependencies: 5, 6, 7
+# Priority: medium
+# Description: Provide conversational interface over transcripts + KGs fulfilling FR-8.* and RAG pipeline.
+# Details:
+1. chat_service.py:
+   • Manage sessions in memory w/ TTL (Redis optional) and store history table later.
+2. ContextAssembler class (PRD 6.4.2) implemented using vector DB (sqlite-vss or FAISS in memory).
+3. Embedding generation via OpenAI `text-embedding-ada-002`; async batch to respect rate limits.
+4. Retrieval: semantic (FAISS), keyword (Whoosh/BM25), graph traversal (networkx), temporal filters.
+5. Response generation with LLM + system prompt including sources.
+6. Channel-wide queries: progressive retrieval → summarization fallback when tokens > max_context_tokens.
+7. Add `/api/v1/chat/*` endpoints calling chat_service.
+
+
+# Test Strategy:
+• Unit: given synthetic embeddings, query returns expected top-k chunk IDs.
+• End-to-end: ask factual question over small video, verify answer contains source timestamps.
+• Token budget test: inject long query; ensure assembled context tokens ≤ request limit.
+• Load test: 100 parallel chat sessions keep latency ≤2s avg (Success Metric).

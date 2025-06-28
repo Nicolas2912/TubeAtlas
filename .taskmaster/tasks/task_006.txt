@@ -1,0 +1,19 @@
+# Task ID: 6
+# Title: Implement Asynchronous Background Processing Framework
+# Status: pending
+# Dependencies: 3, 5
+# Priority: medium
+# Description: Enable Celery + Redis workers for long-running transcript & KG tasks with progress tracking.
+# Details:
+1. Add celery_app.py with JSON serializer, exponential back-off, rate_limit (20/m default).
+2. Convert service functions into Celery tasks: `tasks.transcript.download_video`, `tasks.kg.generate_video` etc.
+3. Update processing_tasks table on task start/progress/finish via `task.update_state` callbacks.
+4. Configure Celery beat for periodic `update_channels` tasks (incremental sync FR-1.6).
+5. Provide graceful shutdown and automatic retry policy for API failures.
+6. Docker-compose: dedicate worker & beat containers.
+
+
+# Test Strategy:
+• Integration test: enqueue download & KG tasks, poll `/api/v1/tasks/{id}` (after Task-7) until `completed`.
+• Simulate failure → ensure automatic retry then status `failed` after max retries.
+• Stress test: 200 tasks queued, verify queue latency <5s average.

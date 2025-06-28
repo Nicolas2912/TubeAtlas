@@ -1,0 +1,20 @@
+# Task ID: 10
+# Title: Comprehensive Testing, Coverage & CI Enforcement
+# Status: pending
+# Dependencies: 1, 2, 3, 5, 6, 7, 8, 9
+# Priority: medium
+# Description: Achieve 90%+ coverage, performance, integration and e2e tests, wired into CI.
+# Details:
+1. Expand pytest suite: unit, integration (with sqlite tmp db), e2e (spin API + worker via docker-compose).
+2. Use pytest-cov; fail if coverage <90%.
+3. Add locust or k6 script for load tests (100 concurrent users) and include in CI (nightly job).
+4. Static analysis gate: mypy ‑-strict, flake8, black ‑-check.
+5. Generate HTML coverage report artifact.
+6. Update GitHub Action to cache dependencies, parallel test matrix (py3.11, py3.12-beta).
+
+
+# Test Strategy:
+• `pytest -n auto` passes with >90% coverage.
+• Load test yields average latency <2s and error rate <0.1%.
+• Static type check passes with zero `error:` lines.
+• Merge request blocked automatically on failure.
