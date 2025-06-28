@@ -1,0 +1,13 @@
+{
+  "id": "video1",
+  "snippet": {
+    "title": "Video 1",
+    "categoryId": "24"
+  },
+  "contentDetails": {
+    "duration": "PT5M00S"
+  },
+  "status": {
+    "privacyStatus": "public"
+  }
+}

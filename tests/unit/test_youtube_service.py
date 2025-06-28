@@ -1,5 +1,8 @@
 """Unit tests for YouTube service."""
 
+import json
+import os
+import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
@@ -539,6 +542,80 @@ class TestYouTubeService:
         assert result["duration_seconds"] is None
         assert result["view_count"] == 0
         assert result["tags"] == []
+
+    def test_persist_raw_response_success(self, youtube_service):
+        """Test successful persistence of raw JSON response."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Override the raw_data_dir for testing
+            youtube_service.raw_data_dir = temp_dir
+
+            video_id = "test_video_123"
+            raw_data = {
+                "id": video_id,
+                "snippet": {"title": "Test Video"},
+                "statistics": {"viewCount": "1000"},
+            }
+
+            # Call the persistence method
+            youtube_service._persist_raw_response(video_id, raw_data)
+
+            # Verify file was created
+            expected_filepath = os.path.join(temp_dir, f"{video_id}.json")
+            assert os.path.exists(expected_filepath)
+
+            # Verify file contents
+            with open(expected_filepath, "r", encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            assert saved_data == raw_data
+
+    def test_persist_raw_response_io_error(self, youtube_service):
+        """Test that IOError during persistence doesn't abort processing."""
+        # Use an invalid directory path to trigger IOError
+        youtube_service.raw_data_dir = "/invalid/path/that/does/not/exist"
+
+        video_id = "test_video_123"
+        raw_data = {"id": video_id, "snippet": {"title": "Test Video"}}
+
+        # Should not raise exception, just log warning
+        with patch("src.tubeatlas.services.youtube_service.logger") as mock_logger:
+            youtube_service._persist_raw_response(video_id, raw_data)
+            mock_logger.warning.assert_called_once()
+            assert "Failed to persist raw JSON" in str(mock_logger.warning.call_args)
+
+    def test_normalize_video_metadata_persists_raw_data(self, youtube_service):
+        """Test that normalize_video_metadata calls _persist_raw_response."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Override the raw_data_dir for testing
+            youtube_service.raw_data_dir = temp_dir
+
+            video_data = {
+                "id": "test_video_456",
+                "snippet": {
+                    "title": "Test Video",
+                    "description": "Test Description",
+                    "channelId": "test_channel",
+                    "channelTitle": "Test Channel",
+                    "publishedAt": "2023-01-01T00:00:00Z",
+                },
+                "contentDetails": {"duration": "PT5M30S"},
+                "statistics": {"viewCount": "1000"},
+                "status": {"privacyStatus": "public"},
+            }
+
+            # Call normalize_video_metadata
+            normalized = youtube_service._normalize_video_metadata(video_data)
+
+            # Verify the raw data was persisted
+            expected_filepath = os.path.join(temp_dir, "test_video_456.json")
+            assert os.path.exists(expected_filepath)
+
+            # Verify file contents match the input
+            with open(expected_filepath, "r", encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            assert saved_data == video_data
+            assert normalized["video_id"] == "test_video_456"
 
     def test_process_video_batch_filters_shorts(self, youtube_service):
         """Test video batch processing filters out Shorts when not requested."""

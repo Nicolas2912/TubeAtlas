@@ -1,6 +1,8 @@
 """YouTube API integration service."""
 
+import json
 import logging
+import os
 import random
 import re
 import time
@@ -26,6 +28,35 @@ class YouTubeService:
             raise ValueError("YouTube API key is required")
 
         self._youtube_client = None
+
+        # Ensure raw data directory exists
+        self.raw_data_dir = os.path.join("data", "raw")
+        os.makedirs(self.raw_data_dir, exist_ok=True)
+
+    def _persist_raw_response(self, video_id: str, raw_data: Dict[str, Any]) -> None:
+        """
+        Persist raw API response to disk for debugging purposes.
+
+        Args:
+            video_id: The video ID to use as filename
+            raw_data: Raw JSON response from YouTube API
+        """
+        try:
+            filename = f"{video_id}.json"
+            filepath = os.path.join(self.raw_data_dir, filename)
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(raw_data, f, indent=2, ensure_ascii=False)
+
+            logger.debug(f"Persisted raw JSON for video {video_id} to {filepath}")
+
+        except IOError as e:
+            logger.warning(f"Failed to persist raw JSON for video {video_id}: {e}")
+            # Don't abort processing, just log the error
+        except Exception as e:
+            logger.warning(
+                f"Unexpected error persisting raw JSON for video {video_id}: {e}"
+            )
 
     @property
     def youtube_client(self):
@@ -473,6 +504,12 @@ class YouTubeService:
         statistics = video_data.get("statistics", {})
         status = video_data.get("status", {})
 
+        video_id = video_data.get("id")
+
+        # Persist raw JSON response for debugging
+        if video_id:
+            self._persist_raw_response(video_id, video_data)
+
         # Parse duration
         duration_seconds = None
         duration_str = content_details.get("duration", "")
@@ -485,7 +522,7 @@ class YouTubeService:
                 logger.warning(f"Failed to parse duration {duration_str}: {e}")
 
         normalized = {
-            "video_id": video_data.get("id"),
+            "video_id": video_id,
             "title": snippet.get("title", ""),
             "description": snippet.get("description", ""),
             "channel_id": snippet.get("channelId", ""),

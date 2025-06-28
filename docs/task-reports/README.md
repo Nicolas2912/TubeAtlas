@@ -44,6 +44,7 @@ Each task report provides:
 | 3.4 | Integrate token counting into TranscriptService | ✅ COMPLETED | [task-3.4-token-counting.md](./task-3.4-token-counting.md) |
 | 3.5 | Persist video & transcript data with upsert and incremental mode | ✅ COMPLETED | [task-3.5-persist-video-transcript.md](./task-3.5-persist-video-transcript.md) |
 | 3.7 | Create Celery task shells for download_channel and download_video | ✅ COMPLETED | [task-3.7-celery-task-shells.md](./task-3.7-celery-task-shells.md) |
+| 3.8 | Persist raw JSON responses for debugging | ✅ COMPLETED | [task-3.8-persist-raw-json-responses.md](./task-3.8-persist-raw-json-responses.md) |
 
 ### Maintenance & Fixes
 
