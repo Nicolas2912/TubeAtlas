@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict, Union
 
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
 
+from src.tubeatlas.rag.chunking.base import ChunkerInterface
+from src.tubeatlas.rag.chunking.fixed import FixedLengthChunker
+from src.tubeatlas.rag.chunking.semantic import SemanticChunker
 from src.tubeatlas.utils.token_counter import count_tokens as count_tokens_util
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -325,3 +328,153 @@ class TranscriptService:
                 "skipped": skipped_trans,
             },
         }
+
+    async def chunk_transcript(  # noqa: C901
+        self,
+        video_id: str,
+        chunker: Union[ChunkerInterface, str] = "fixed",
+        language_codes: Optional[List[str]] = None,
+        chunker_config: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch and chunk a transcript using the specified chunking strategy.
+
+        Args:
+            video_id: The ID of the YouTube video
+            chunker: Either a ChunkerInterface instance or a string ('fixed' or 'semantic')
+            language_codes: A list of preferred language codes (e.g., ['en', 'en-US'])
+            chunker_config: Optional configuration for the chunker if created from string
+
+        Returns:
+            Dictionary containing:
+                - status: 'success', 'not_found', 'disabled', or 'error'
+                - video_id: The video ID
+                - language_code: The language code of the transcript
+                - is_generated: Whether the transcript was auto-generated
+                - chunks: List of Chunk objects (if successful)
+                - chunk_statistics: Statistics about the chunks (if successful)
+                - error: Error message (if failed)
+        """
+        # Initialize language codes first
+        if language_codes is None:
+            language_codes = ["en"]
+
+        # Get the transcript
+        transcript = await self.get_transcript(video_id, language_codes)
+
+        if transcript["status"] != "success":
+            return {
+                "status": transcript["status"],
+                "video_id": video_id,
+                "language_code": transcript["language_code"],
+                "is_generated": transcript["is_generated"],
+                "chunks": None,
+                "chunk_statistics": None,
+                "error": f"Failed to fetch transcript: {transcript['status']}",
+            }
+
+        # Initialize chunker if string provided
+        if isinstance(chunker, str):
+            config = chunker_config or {}
+            if chunker.lower() == "fixed":
+                chunker = FixedLengthChunker(**config)
+            elif chunker.lower() == "semantic":
+                if "embedder" not in config:
+                    return {
+                        "status": "error",
+                        "video_id": video_id,
+                        "language_code": transcript["language_code"],
+                        "is_generated": transcript["is_generated"],
+                        "chunks": None,
+                        "chunk_statistics": None,
+                        "error": "Embedder is required for semantic chunking",
+                    }
+                chunker = SemanticChunker(**config)
+            else:
+                return {
+                    "status": "error",
+                    "video_id": video_id,
+                    "language_code": transcript["language_code"],
+                    "is_generated": transcript["is_generated"],
+                    "chunks": None,
+                    "chunk_statistics": None,
+                    "error": f"Invalid chunker type: {chunker}",
+                }
+
+        try:
+            # Combine all segments into a single text while preserving timestamps
+            full_text = ""
+            timestamp_map = {}
+
+            assert transcript["segments"] is not None
+            for segment in transcript["segments"]:
+                start_pos = len(full_text)
+                full_text += segment["text"] + " "
+
+                # Map character positions to timestamp info
+                timestamp_map[start_pos] = {
+                    "start": segment["start"],
+                    "duration": segment["duration"],
+                }
+
+            # Chunk the full text
+            chunks = chunker.chunk(full_text.strip())
+
+            # Calculate chunk statistics
+            chunk_statistics = chunker.get_chunk_statistics(chunks)
+
+            # Add timestamp information to each chunk's metadata
+            for chunk in chunks:
+                # Find the closest timestamp for chunk start
+                chunk_start_time = None
+                chunk_end_time = None
+
+                # Find start timestamp
+                for pos in sorted(timestamp_map.keys()):
+                    if pos <= chunk.start_idx:
+                        chunk_start_time = timestamp_map[pos]["start"]
+                    else:
+                        break
+
+                # Find end timestamp
+                for pos in sorted(timestamp_map.keys()):
+                    if pos <= chunk.end_idx:
+                        chunk_end_time = (
+                            timestamp_map[pos]["start"] + timestamp_map[pos]["duration"]
+                        )
+                    else:
+                        # We've gone past the last segment relevant to this chunk
+                        break
+
+                # Add timestamp metadata
+                chunk.metadata.update(
+                    {
+                        "start_time": chunk_start_time,
+                        "end_time": chunk_end_time,
+                        "video_id": video_id,
+                        "language_code": transcript["language_code"],
+                        "is_generated": transcript["is_generated"],
+                    }
+                )
+
+            return {
+                "status": "success",
+                "video_id": video_id,
+                "language_code": transcript["language_code"],
+                "is_generated": transcript["is_generated"],
+                "chunks": chunks,
+                "chunk_statistics": chunk_statistics,
+                "error": None,
+            }
+
+        except Exception as e:
+            logger.error(f"Error chunking transcript for video {video_id}: {str(e)}")
+            return {
+                "status": "error",
+                "video_id": video_id,
+                "language_code": transcript["language_code"],
+                "is_generated": transcript["is_generated"],
+                "chunks": None,
+                "chunk_statistics": None,
+                "error": str(e),
+            }
