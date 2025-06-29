@@ -11,6 +11,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # =============================================================================
+  # PARALLEL JOB 1: Code Quality & Linting (runs in parallel)
+  # =============================================================================
   lint:
     name: Code Quality & Linting
     runs-on: ubuntu-latest
@@ -26,38 +29,59 @@ jobs:
       with:
         python-version: '3.12'
 
+    # Enhanced Poetry dependency caching with multiple cache keys
     - name: Cache Poetry dependencies
       uses: actions/cache@v4
       with:
         path: |
           ~/.cache/pypoetry
           ~/.cache/pip
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          ~/.local/share/pypoetry
+        key: lint-poetry-v2-${{ runner.os }}-py312-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-poetry-
+          lint-poetry-v2-${{ runner.os }}-py312-
+          lint-poetry-v2-${{ runner.os }}-
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    - name: Install Poetry (cached)
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.8.3
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
 
-    - name: Configure Poetry
-      run: |
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
+    - name: Load cached virtual environment
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: lint-venv-v2-${{ runner.os }}-py312-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          lint-venv-v2-${{ runner.os }}-py312-
 
-    - name: Install dependencies
+    - name: Install dependencies (only if cache miss)
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
         poetry install --with dev --no-interaction --no-ansi
+
+    - name: Cache pre-commit hooks
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-v2-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          pre-commit-v2-${{ runner.os }}-
 
     - name: Run pre-commit hooks
       run: |
         poetry run pre-commit run --all-files
 
+  # =============================================================================
+  # PARALLEL JOB 2: Run Tests & Coverage (runs in parallel)
+  # =============================================================================
   test:
     name: Run Tests & Coverage
     runs-on: ubuntu-latest
-    needs: lint
 
     strategy:
       matrix:
@@ -74,29 +98,48 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    # Enhanced Poetry dependency caching
     - name: Cache Poetry dependencies
       uses: actions/cache@v4
       with:
         path: |
           ~/.cache/pypoetry
           ~/.cache/pip
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          ~/.local/share/pypoetry
+        key: test-poetry-v2-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-poetry-
+          test-poetry-v2-${{ runner.os }}-py${{ matrix.python-version }}-
+          test-poetry-v2-${{ runner.os }}-
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    - name: Install Poetry (cached)
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.8.3
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
 
-    - name: Configure Poetry
-      run: |
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
+    - name: Load cached virtual environment
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: test-venv-v2-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          test-venv-v2-${{ runner.os }}-py${{ matrix.python-version }}-
 
-    - name: Install dependencies
+    - name: Install dependencies (only if cache miss)
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
         poetry install --with dev --no-interaction --no-ansi
+
+    - name: Cache pytest cache
+      uses: actions/cache@v4
+      with:
+        path: .pytest_cache
+        key: pytest-cache-v2-${{ runner.os }}-${{ hashFiles('tests/**/*.py') }}
+        restore-keys: |
+          pytest-cache-v2-${{ runner.os }}-
 
     - name: Run tests with coverage
       run: |
@@ -117,12 +160,15 @@ jobs:
         echo "Coverage report generated and uploaded as artifact." >> $GITHUB_STEP_SUMMARY
         echo "Download the artifact to view detailed HTML coverage report." >> $GITHUB_STEP_SUMMARY
 
+  # =============================================================================
+  # JOB 3: Build & Push Docker Image (waits for lint + test)
+  # =============================================================================
   build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.event_name == 'push'
-    timeout-minutes: 30
+    timeout-minutes: 25  # Reduced from 30 minutes
 
     permissions:
       contents: read
@@ -134,32 +180,32 @@ jobs:
       with:
         clean: true
 
-    - name: Aggressive disk space cleanup
+    # More targeted disk cleanup (faster)
+    - name: Optimized disk space cleanup
       run: |
         echo "📦 Initial disk usage:" && df -h
-        # Remove large packages and caches
+        # Remove only the largest space consumers
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
-        sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/chromium || true
-        sudo rm -rf /usr/share/swift /usr/local/.ghcup || true
+        sudo rm -rf /usr/local/share/boost /usr/local/graalvm || true
         # Clean package caches
-        sudo apt-get clean
-        sudo apt-get autoremove -y
-        # Clean Docker
-        docker system prune -af --volumes || true
-        # Clean pip and other caches
-        sudo rm -rf ~/.cache /tmp/* /var/tmp/* || true
+        sudo apt-get clean && sudo apt-get autoremove -y
         echo "📦 Disk usage after cleanup:" && df -h
 
     # Normalize image name to lowercase for OCI compliance
     - name: Normalize image name (lowercase)
       run: echo "IMAGE_NAME_LOWER=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
+    # Enhanced Docker Buildx setup with optimizations
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         driver-opts: |
           network=host
+          image=moby/buildkit:v0.12.0
+        buildkitd-flags: |
+          --allow-insecure-entitlement security.insecure
+          --allow-insecure-entitlement network.host
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -179,19 +225,30 @@ jobs:
           type=sha,format=short,prefix=sha-
           type=raw,value=latest,enable={{is_default_branch}}
 
+    # Enhanced Docker build with improved caching and compression
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
       with:
         context: .
-        file: Dockerfile.optimized  # Use optimized multi-stage Dockerfile
+        file: Dockerfile.optimized
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        # Multi-layered caching strategy for maximum efficiency
+        cache-from: |
+          type=gha
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:cache
+        cache-to: |
+          type=gha,mode=max
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:cache,mode=max
         build-args: |
           BUILDKIT_INLINE_CACHE=1
+          DOCKER_BUILDKIT=1
+        # Enhanced build optimizations
+        provenance: false  # Reduces build time
+        sbom: false       # Reduces build time
+        outputs: type=registry,compression=gzip,compression-level=6,force-compression=true
 
     - name: Generate build summary
       run: |
@@ -201,21 +258,18 @@ jobs:
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
+        echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
         echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
-    - name: Post-build cleanup
-      if: always()
-      run: |
-        docker system prune -af --volumes || true
-        echo "📦 Final disk usage:" && df -h
-
+  # =============================================================================
+  # JOB 4: Security Scan (runs after build)
+  # =============================================================================
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
-    timeout-minutes: 15
+    timeout-minutes: 10  # Reduced from 15 minutes
 
     permissions:
       contents: read
@@ -227,12 +281,11 @@ jobs:
       with:
         clean: true
 
-    - name: Free disk space for security scan
+    # Minimal cleanup for security scan
+    - name: Minimal disk cleanup
       run: |
-        echo "📦 Disk usage before cleanup:" && df -h
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
-        docker system prune -af --volumes || true
-        echo "📦 Disk usage after cleanup:" && df -h
+        docker system prune -f --volumes || true
+        echo "📦 Disk usage:" && df -h
 
     # Convert IMAGE_NAME to lower-case for OCI compliance
     - name: Normalize image name (lowercase)
@@ -250,24 +303,24 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # Wait a moment for image to be fully available and verify it exists
+    # Optimized image verification with shorter timeout
     - name: Verify image exists
       run: |
         echo "Checking if image exists: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:sha-${{ env.SHORT_SHA }}"
 
-        # Wait up to 2 minutes for the image to be available
-        for i in {1..12}; do
+        # Wait up to 1 minute for the image to be available (reduced from 2 minutes)
+        for i in {1..6}; do
           if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:sha-${{ env.SHORT_SHA }} > /dev/null 2>&1; then
             echo "✅ Image found and accessible"
             echo "IMAGE_TAG=sha-${{ env.SHORT_SHA }}" >> $GITHUB_ENV
             break
           else
-            echo "⏳ Attempt $i/12: Image not yet available, waiting 10 seconds..."
+            echo "⏳ Attempt $i/6: Image not yet available, waiting 10 seconds..."
             sleep 10
           fi
 
-          if [ $i -eq 12 ]; then
-            echo "❌ SHA-based image not found after 2 minutes"
+          if [ $i -eq 6 ]; then
+            echo "❌ SHA-based image not found after 1 minute"
             echo "Trying fallback to latest tag for main branch..."
 
             if [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -292,7 +345,7 @@ jobs:
         image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.IMAGE_TAG }}
         format: 'sarif'
         output: 'trivy-results.sarif'
-        timeout: '10m'
+        timeout: '8m'  # Reduced from 10 minutes
         exit-code: '0'  # Don't fail the job on vulnerabilities, just report them
 
     - name: Upload Trivy scan results
@@ -312,8 +365,3 @@ jobs:
         else
           echo "**Status:** Scan failed or results not generated ❌" >> $GITHUB_STEP_SUMMARY
         fi
-
-    - name: Post-scan cleanup
-      if: always()
-      run: |
-        docker system prune -af --volumes || true

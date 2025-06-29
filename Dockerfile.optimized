@@ -1,29 +1,39 @@
 # =============================================================================
+# ULTRA-OPTIMIZED MULTI-STAGE DOCKERFILE FOR CI/CD PERFORMANCE
+# =============================================================================
+
+# =============================================================================
 # Base Python Image with pre-installed system packages
 # =============================================================================
 FROM python:3.12-slim AS base
 
-# Set environment variables for Python
+# Set environment variables for Python and build optimization
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
+    PIP_NO_CACHE_DIR=0 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
     POETRY_NO_INTERACTION=1 \
     POETRY_VENV_IN_PROJECT=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache \
-    POETRY_VERSION=1.8.3
+    POETRY_VERSION=1.8.3 \
+    POETRY_INSTALLER_PARALLEL=true \
+    POETRY_INSTALLER_MAX_WORKERS=10
 
 # =============================================================================
-# System Dependencies Stage (Cached Layer)
+# System Dependencies Stage (Heavily Cached Layer)
 # =============================================================================
 FROM base AS system-deps
 
-# Install system dependencies in a single layer with minimal packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build essentials (only what's needed)
-    build-essential \
-    curl \
-    # Cleanup in same layer
+# Install system dependencies in optimized single layer with specific versions
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    # Essential build tools
+    build-essential=12.10ubuntu1 \
+    curl=7.88.1-10ubuntu0.6 \
+    # Add git for potential pip dependencies
+    git=1:2.39.2-1.1ubuntu0.1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && apt-get autoremove -y
@@ -33,13 +43,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 FROM system-deps AS poetry-installer
 
-# Install Poetry with pip (faster than curl method)
-RUN pip install poetry==$POETRY_VERSION
+# Install Poetry with pip using build mount caches for maximum speed
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install poetry==$POETRY_VERSION
 
-# Configure Poetry settings for container use
+# Configure Poetry settings for container use and parallel installation
 RUN poetry config virtualenvs.create false \
     && poetry config installer.parallel true \
-    && poetry config installer.max-workers 10
+    && poetry config installer.max-workers 10 \
+    && poetry config cache-dir /tmp/poetry_cache
 
 # =============================================================================
 # Dependencies Installation Stage (Most Cacheable)
@@ -51,62 +64,71 @@ WORKDIR /app
 # Copy only dependency files first for maximum cache efficiency
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies with optimizations
-RUN poetry install --only=main --no-interaction --no-ansi --no-root
+# Install dependencies with optimizations and pip cache mounts
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/tmp/poetry_cache \
+    poetry install --only=main --no-interaction --no-ansi --no-root \
+    && rm -rf /tmp/poetry_cache
 
 # =============================================================================
-# Source Code Stage
+# Source Code Stage (Minimal invalidation)
 # =============================================================================
 FROM deps-installer AS app-builder
 
-# Copy source code
+# Copy source code in optimized order (most stable files first)
 COPY src/ ./src/
 
 # =============================================================================
-# Runtime Stage - Minimal runtime environment
+# Runtime Stage - Ultra-Minimal Production Environment
 # =============================================================================
 FROM python:3.12-slim AS runtime
 
-# Set environment variables
+# Set optimized environment variables for production
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/usr/local/bin:$PATH" \
-    PYTHONPATH="/app/src"
+    PYTHONPATH="/app/src" \
+    # Performance optimizations
+    PYTHONHASHSEED=random \
+    MALLOC_ARENA_MAX=2
 
-# Install ONLY runtime dependencies (minimal set)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+# Install ONLY critical runtime dependencies in single layer with cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    # Minimal runtime dependencies
+    curl=7.88.1-10ubuntu0.6 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && apt-get autoremove -y
 
-# Create non-root user
+# Create optimized non-root user in single layer
 RUN groupadd -g 1001 appuser && \
     useradd -r -u 1001 -g appuser -d /home/appuser -s /bin/bash -c "App User" appuser && \
     mkdir -p /home/appuser/.local && \
     chown -R appuser:appuser /home/appuser
 
-# Copy installed packages from deps stage in a single layer
+# Copy Python packages in optimized order (most stable first)
 COPY --from=deps-installer --chown=appuser:appuser /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=deps-installer --chown=appuser:appuser /usr/local/bin /usr/local/bin
 
-# Set work directory and copy source code
+# Set work directory and copy application files
 WORKDIR /app
 COPY --from=app-builder --chown=appuser:appuser /app/src ./src
 
-# Copy additional necessary files
-COPY --chown=appuser:appuser pyproject.toml ./
+# Copy configuration files in order of stability (least likely to change first)
 COPY --chown=appuser:appuser .env.template ./
+COPY --chown=appuser:appuser pyproject.toml ./
 
-# Switch to non-root user
+# Switch to non-root user early for security
 USER appuser
 
-# Expose port
+# Expose application port
 EXPOSE 8000
 
-# Health check with optimized settings
-HEALTHCHECK --interval=15s --timeout=10s --start-period=5s --retries=3 \
+# Optimized health check with faster response times
+HEALTHCHECK --interval=15s --timeout=8s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command
-CMD ["uvicorn", "tubeatlas.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command with optimized Uvicorn settings for production
+CMD ["uvicorn", "tubeatlas.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--loop", "uvloop", "--http", "httptools"]
