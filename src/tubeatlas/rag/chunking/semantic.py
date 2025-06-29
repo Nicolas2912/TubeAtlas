@@ -7,6 +7,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+import numpy.typing as npt
 
 from ...utils.token_counter import TokenCounter
 from ..embedding.base import EmbedderInterface
@@ -163,16 +164,18 @@ class SemanticChunker(ChunkerInterface):
         embeddings = self.embedder.embed_texts(sentence_texts)
 
         # Convert to numpy arrays for easier manipulation
-        embeddings = np.array(embeddings)
+        embeddings_array: npt.NDArray[np.float64] = np.array(embeddings)
 
         chunks = []
         current_chunk_sentences = [sentences[0]]
-        current_chunk_embedding = embeddings[0:1]  # Keep as 2D array
+        current_chunk_embedding: npt.NDArray[np.float64] = embeddings_array[
+            0:1
+        ]  # Keep as 2D array
         chunk_id = 0
 
         for i in range(1, len(sentences)):
             sentence = sentences[i]
-            sentence_embedding = embeddings[i : i + 1]  # Keep as 2D array
+            sentence_embedding = embeddings_array[i : i + 1]  # Keep as 2D array
 
             # Calculate similarity with current chunk centroid
             chunk_centroid = np.mean(current_chunk_embedding, axis=0, keepdims=True)
@@ -226,7 +229,9 @@ class SemanticChunker(ChunkerInterface):
 
         return chunks
 
-    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    def _cosine_similarity(
+        self, a: npt.NDArray[np.float64], b: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate cosine similarity between two embedding arrays.
 

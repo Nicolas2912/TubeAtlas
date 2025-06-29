@@ -1,14 +1,9 @@
-# flake8: noqa
-# mypy: ignore-errors
-
 """
 Base interface for text embedding models.
 """
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
-
-import numpy as np
 
 
 class EmbedderInterface(ABC):

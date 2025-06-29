@@ -51,10 +51,13 @@ Each task report provides:
 | Subtask | Title | Status | Report |
 |---------|-------|--------|--------|
 | 4.2 | TokenCounter Utility | ✅ COMPLETED | [task-4.2-token-counter-utility.md](./task-4.2-token-counter-utility.md) |
+| 4.12 | Quality, Typing, Docs & Test Suite | ✅ COMPLETED | [task-4.12-quality-typing-docs-test-suite.md](./task-4.12-quality-typing-docs-test-suite.md) |
 
 ### Maintenance & Fixes
 
-- **CI/CD** ✅ [CI/CD Pipeline Issues Fixed](ci-cd-pipeline-fixes.md) - Legacy code conflicts, hook updates, baseline regeneration
+| Type | Title | Status | Report |
+|------|-------|--------|--------|
+| CI/CD | Pipeline Optimization & Docker Build Fixes | ✅ COMPLETED | [ci-cd-pipeline-fixes.md](./ci-cd-pipeline-fixes.md) |
 
 ## Report Format
 

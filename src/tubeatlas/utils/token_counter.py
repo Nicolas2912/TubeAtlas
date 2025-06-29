@@ -1,17 +1,19 @@
-"""
-Token counting utility for various language models using tiktoken.
-"""
+"""Token counting utilities for TubeAtlas."""
 
 import functools
 import logging
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    import tiktoken
+else:
+    tiktoken: Any = None
 
 try:
     import tiktoken
 
     TIKTOKEN_AVAILABLE = True
 except ImportError:
-    tiktoken = None
     TIKTOKEN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

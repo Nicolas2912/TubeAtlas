@@ -1,6 +1,3 @@
-# flake8: noqa
-# mypy: ignore-errors
-
 """
 Base interface for vector stores.
 """
@@ -162,13 +159,19 @@ class VectorStoreInterface(ABC):
         Raises:
             ValueError: If embeddings are invalid
         """
+        self._validate_embeddings_structure(embeddings)
+        first_embedding = embeddings[0]
+        expected_dim = self._determine_expected_dimension(first_embedding, expected_dim)
+        self._validate_all_embeddings(embeddings, expected_dim)
+
+    def _validate_embeddings_structure(self, embeddings: List[List[float]]) -> None:
+        """Validate basic structure of embeddings."""
         if not embeddings:
             raise ValueError("embeddings cannot be empty")
 
         if not isinstance(embeddings, list):
             raise ValueError("embeddings must be a list")
 
-        # Check first embedding
         first_embedding = embeddings[0]
         if not isinstance(first_embedding, list):
             raise ValueError("each embedding must be a list of floats")
@@ -176,16 +179,23 @@ class VectorStoreInterface(ABC):
         if not first_embedding:
             raise ValueError("embeddings cannot be empty vectors")
 
-        # Determine expected dimension
+    def _determine_expected_dimension(
+        self, first_embedding: List[float], expected_dim: Optional[int]
+    ) -> int:
+        """Determine and validate expected dimension."""
         if expected_dim is None:
-            expected_dim = len(first_embedding)
+            return len(first_embedding)
         elif len(first_embedding) != expected_dim:
             raise ValueError(
                 f"first embedding has dimension {len(first_embedding)}, "
                 f"expected {expected_dim}"
             )
+        return expected_dim
 
-        # Validate all embeddings
+    def _validate_all_embeddings(
+        self, embeddings: List[List[float]], expected_dim: int
+    ) -> None:
+        """Validate all embeddings have correct dimension and values."""
         for i, embedding in enumerate(embeddings):
             if not isinstance(embedding, list):
                 raise ValueError(f"embedding at index {i} must be a list")
@@ -196,13 +206,16 @@ class VectorStoreInterface(ABC):
                     f"expected {expected_dim}"
                 )
 
-            # Check that all values are numeric
-            for j, value in enumerate(embedding):
-                if not isinstance(value, (int, float)):
-                    raise ValueError(
-                        f"embedding at index {i}, position {j} "
-                        f"must be numeric, got {type(value)}"
-                    )
+            self._validate_embedding_values(embedding, i)
+
+    def _validate_embedding_values(self, embedding: List[float], index: int) -> None:
+        """Validate individual embedding values are numeric."""
+        for j, value in enumerate(embedding):
+            if not isinstance(value, (int, float)):
+                raise ValueError(
+                    f"embedding at index {index}, position {j} "
+                    f"must be numeric, got {type(value)}"
+                )
 
     def validate_chunks_and_embeddings(
         self, chunks: List[Chunk], embeddings: List[List[float]]

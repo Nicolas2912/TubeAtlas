@@ -44,6 +44,8 @@ pre-commit = "^3.0"
 
 # Tool configurations
 detect-secrets = "^1.5.0"
+sphinx = "^8.2.3"
+sphinx-rtd-theme = "^3.0.2"
 [tool.black]
 line-length = 88
 target-version = ['py312']

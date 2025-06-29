@@ -42,7 +42,8 @@ async def lifespan(app: FastAPI):
         logger.info("Testing database connectivity...")
         async with async_engine.begin() as conn:
             result = await conn.execute(text("SELECT 1"))
-            if result.fetchone()[0] == 1:
+            row = result.fetchone()
+            if row is not None and row[0] == 1:
                 logger.info("Database connectivity test passed")
             else:
                 logger.error("Database connectivity test failed")
