@@ -58,6 +58,7 @@ Each task report provides:
 | Type | Title | Status | Report |
 |------|-------|--------|--------|
 | CI/CD | Pipeline Optimization & Docker Build Fixes | ✅ COMPLETED | [ci-cd-pipeline-fixes.md](./ci-cd-pipeline-fixes.md) |
+| Testing | CI/CD Pipeline Test Fixes - OpenAI API Key Mocking | ✅ COMPLETED | [ci-cd-pipeline-test-fixes.md](./ci-cd-pipeline-test-fixes.md) |
 
 ## Report Format
 

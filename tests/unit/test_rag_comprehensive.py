@@ -4,6 +4,7 @@ Comprehensive tests for RAG components to improve coverage.
 
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -84,9 +85,16 @@ class TestChunkingBase:
 class TestEmbeddingBase:
     """Test embedding base classes and validation."""
 
-    def test_embedder_validate_texts_errors(self):
+    @patch("tubeatlas.rag.embedding.openai.openai.OpenAI")
+    def test_embedder_validate_texts_errors(self, mock_openai_client):
         """Test text validation errors for embedder."""
-        embedder = OpenAIEmbedder()
+        # Mock the OpenAI client to avoid API key requirement
+        mock_client = Mock()
+        mock_openai_client.return_value = mock_client
+
+        embedder = OpenAIEmbedder(
+            api_key="dummy-key-for-testing"  # pragma: allowlist secret
+        )
 
         with pytest.raises(ValueError, match="texts cannot be empty"):
             embedder.validate_texts([])
@@ -100,9 +108,16 @@ class TestEmbeddingBase:
         with pytest.raises(ValueError, match="text at index 1 cannot be empty"):
             embedder.validate_texts(["valid", ""])
 
-    def test_embedder_validate_text_errors(self):
+    @patch("tubeatlas.rag.embedding.openai.openai.OpenAI")
+    def test_embedder_validate_text_errors(self, mock_openai_client):
         """Test single text validation errors."""
-        embedder = OpenAIEmbedder()
+        # Mock the OpenAI client to avoid API key requirement
+        mock_client = Mock()
+        mock_openai_client.return_value = mock_client
+
+        embedder = OpenAIEmbedder(
+            api_key="dummy-key-for-testing"  # pragma: allowlist secret
+        )
 
         with pytest.raises(ValueError, match="text must be a string"):
             embedder.validate_text(123)
@@ -110,9 +125,16 @@ class TestEmbeddingBase:
         with pytest.raises(ValueError, match="text cannot be empty"):
             embedder.validate_text("")
 
-    def test_chunk_long_text(self):
+    @patch("tubeatlas.rag.embedding.openai.openai.OpenAI")
+    def test_chunk_long_text(self, mock_openai_client):
         """Test chunking long text functionality."""
-        embedder = OpenAIEmbedder()
+        # Mock the OpenAI client to avoid API key requirement
+        mock_client = Mock()
+        mock_openai_client.return_value = mock_client
+
+        embedder = OpenAIEmbedder(
+            api_key="dummy-key-for-testing"  # pragma: allowlist secret
+        )
 
         long_text = "word " * 100  # 500 characters
         chunks = embedder.chunk_long_text(long_text, max_length=50, overlap=10)
@@ -122,9 +144,16 @@ class TestEmbeddingBase:
             len(chunk) <= 60 for chunk in chunks
         )  # Allow some flexibility for word boundaries
 
-    def test_chunk_short_text(self):
+    @patch("tubeatlas.rag.embedding.openai.openai.OpenAI")
+    def test_chunk_short_text(self, mock_openai_client):
         """Test chunking text that doesn't need splitting."""
-        embedder = OpenAIEmbedder()
+        # Mock the OpenAI client to avoid API key requirement
+        mock_client = Mock()
+        mock_openai_client.return_value = mock_client
+
+        embedder = OpenAIEmbedder(
+            api_key="dummy-key-for-testing"  # pragma: allowlist secret
+        )
 
         short_text = "short text"
         chunks = embedder.chunk_long_text(short_text, max_length=50)
@@ -198,9 +227,18 @@ class TestRegistryErrorHandling:
 class TestOpenAIEmbedderErrorHandling:
     """Test OpenAI embedder error handling."""
 
-    def test_get_config(self):
+    @patch("tubeatlas.rag.embedding.openai.openai.OpenAI")
+    def test_get_config(self, mock_openai_client):
         """Test get_config method."""
-        embedder = OpenAIEmbedder(model="text-embedding-3-small", batch_size=50)
+        # Mock the OpenAI client to avoid API key requirement
+        mock_client = Mock()
+        mock_openai_client.return_value = mock_client
+
+        embedder = OpenAIEmbedder(
+            model="text-embedding-3-small",
+            batch_size=50,
+            api_key="dummy-key-for-testing",  # pragma: allowlist secret
+        )
 
         config = embedder.get_config()
 
