@@ -53,6 +53,13 @@ Each task report provides:
 | 4.2 | TokenCounter Utility | ✅ COMPLETED | [task-4.2-token-counter-utility.md](./task-4.2-token-counter-utility.md) |
 | 4.12 | Quality, Typing, Docs & Test Suite | ✅ COMPLETED | [task-4.12-quality-typing-docs-test-suite.md](./task-4.12-quality-typing-docs-test-suite.md) |
 
+### Task 5: Build Knowledge Graph Generation Pipeline
+
+| Subtask | Title | Status | Report |
+|---------|-------|--------|--------|
+| 5.2 | Transcript Retrieval & Chunking Integration | ✅ COMPLETED | [task-5.2-transcript-chunking-iterator-interface.md](./task-5.2-transcript-chunking-iterator-interface.md) |
+| 5.3 | LangChain GraphPrompter Prompt Engineering | ✅ COMPLETED | [task-5.3-graph-extraction-prompter.md](./task-5.3-graph-extraction-prompter.md) |
+
 ### Maintenance & Fixes
 
 | Type | Title | Status | Report |

@@ -1,0 +1,64 @@
+# GraphPrompter Configuration
+# Configuration for knowledge graph extraction from transcript chunks
+
+graph_prompter:
+  # Model Configuration
+  primary_model: "gpt-4.1-mini"
+  fallback_model: "gpt-4.1-mini"
+  primary_max_tokens: 4000
+  fallback_max_tokens: 8000
+  temperature: 0.0
+  strict_mode: true
+
+  # Processing Configuration
+  batch_size: 5
+  max_retries: 3
+  retry_delay: 1.0
+
+  # Prompt Engineering
+  additional_instructions: |
+    Focus on extracting factual relationships from conversational transcripts.
+    Pay attention to:
+    - Topics and concepts discussed by speakers
+    - Relationships between people, organizations, and ideas
+    - Technical terms and definitions explained
+    - Educational content and learning objectives
+    - References to external sources, books, papers
+    - Speaker expertise and professional relationships
+
+    For transcript data:
+    - Handle conversational language and informal speech
+    - Extract meaningful entities despite speech patterns (ums, ahs, etc.)
+    - Identify temporal relationships and sequences
+    - Capture cause-and-effect relationships discussed
+    - Note speaker attributions for statements and opinions
+
+    Quality guidelines:
+    - Prefer specific over general relationships
+    - Ensure subject and object are meaningful entities
+    - Use descriptive but concise predicate names
+    - Filter out overly generic relationships (like "mentions")
+    - Maintain consistency in entity naming
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  enable_token_logging: true
+  enable_timing_logging: true
+  log_model_switches: true
+
+# Quality Filters
+quality_filters:
+  min_entity_length: 2
+  max_entity_length: 100
+  exclude_predicates:
+    - "mentions"
+    - "says"
+    - "talks about"
+  prefer_predicates:
+    - "teaches"
+    - "explains"
+    - "recommends"
+    - "works at"
+    - "created"
+    - "authored"

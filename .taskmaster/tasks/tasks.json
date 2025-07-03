@@ -239,8 +239,8 @@
             "title": "Transcript Retrieval & Chunking Integration",
             "description": "Fetch raw video/audio transcripts and integrate a chunking mechanism compatible with the existing ingestion pipeline.",
             "dependencies": [],
-            "details": "• Extend current downloader to support YouTube/Vimeo APIs.\n• Normalize transcripts (timestamps, speaker tags).\n• Implement chunking strategy (token-based sliding window with overlap) returning metadata-rich chunks.\n• Provide iterator interface for downstream consumers.\n• Verify chunk boundaries respect model context limits.",
-            "status": "pending",
+            "details": "• Extend current downloader to support YouTube/Vimeo APIs.\n• Normalize transcripts (timestamps, speaker tags).\n• Implement chunking strategy (token-based sliding window with overlap) returning metadata-rich chunks.\n• Provide iterator interface for downstream consumers.\n• Verify chunk boundaries respect model context limits.\n<info added on 2025-07-03T19:48:22.583Z>\n• Implemented generator-based iterator interface (`Generator[TranscriptChunk, None, None]`) with backward-compatible `*_list` wrappers for legacy code  \n• Added `verify_context_limits()` to enforce model token limits and automatic fallback splitting for oversized chunks  \n• Introduced `chunk_transcript_with_timestamps()` enabling transcript-aware, timestamp-preserving chunking across multiple timestamp formats  \n• Created `ChunkMetadata` and `TranscriptChunk` dataclasses to expose rich metadata (chunk index, token counts, timestamp range) to downstream components  \n• Ensured overlap handling respects both token windows and timestamp boundaries  \n• All new functionality is fully integrated and memory-efficient, ready for use in the ingestion pipeline\n</info added on 2025-07-03T19:48:22.583Z>",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -250,8 +250,8 @@
             "dependencies": [
               2
             ],
-            "details": "• Create system & few-shot templates optimized for conversational transcripts.\n• Configure GraphPrompter chain (LLM selection, temperature, stop tokens).\n• Implement fallback/escalation logic (e.g., switch models on high token count).\n• Output schema: list of triples with provenance.",
-            "status": "pending",
+            "details": "• Create system & few-shot templates optimized for conversational transcripts.\n• Configure GraphPrompter chain (LLM selection, temperature, stop tokens).\n• Implement fallback/escalation logic (e.g., switch models on high token count).\n• Output schema: list of triples with provenance.\n<info added on 2025-07-03T19:54:11.655Z>\n• Implement GraphPrompter wrapper around LangChain’s LLMGraphTransformer in `src/tubeatlas/rag/graph_extraction/prompter.py`, exposing `extract_triples(chunks: list[Chunk]) -> list[Triple]`.\n• Reuse patterns from `kg_builder_langchain.py` (model init, `additional_instructions`) to keep output schema `{\"subject\": str, \"predicate\": str, \"object\": str}`.\n• Store prompt templates under `src/tubeatlas/rag/graph_extraction/prompts/`, tuned for speaker-tagged dialogue and time-coded context.\n• Add `graph_extraction.yaml` config listing model hierarchy (gpt-3.5-turbo → gpt-4) and max-token thresholds that trigger fallback/escalation.\n• Provide pytest suite `tests/rag/test_graph_prompter.py` with deterministic LLM mocks for: single chunk, batched chunks, fallback path, and malformed output repair.\n• Export GraphPrompter via `rag.graph_extraction.__init__` so the upcoming triple merging task (5.4) can import it directly.\n</info added on 2025-07-03T19:54:11.655Z>\n<info added on 2025-07-03T19:58:00.444Z>\n• Extend GraphPrompter to expose both sync `extract_triples()` and async `aextract_triples()` methods backed by a shared private `_extract()` routine for DRY logic.  \n• Preserve provenance by attaching `chunk.metadata` (speaker, start/end timestamps, url) to each emitted triple under `provenance` key.  \n• Add structured logging via `structlog`, recording model name, token counts, fallback triggers, and retry attempts for observability.  \n• Implement configurable retry policy (max_attempts, exponential back-off) driven by `graph_extraction.yaml`.  \n• Prepare optional hand-off hook to `tubeatlas.services.kg_service.KGService.ingest_triples()` (currently stubbed) so downstream integration only requires flipping a feature flag.\n</info added on 2025-07-03T19:58:00.444Z>",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -262,7 +262,7 @@
               3
             ],
             "details": "• Hash-based signature to detect duplicate triples.\n• Similarity threshold for fuzzy matches (e.g., cosine on embeddings).\n• Conflict resolution strategy (recency, confidence score).\n• Update node/edge attributes (frequency, sources).",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": ""
           },
           {
@@ -584,7 +584,7 @@
     ],
     "metadata": {
       "created": "2025-06-26T19:11:26.826Z",
-      "updated": "2025-06-29T10:15:41.425Z",
+      "updated": "2025-07-03T20:12:21.867Z",
       "description": "Tasks for master context"
     }
   }

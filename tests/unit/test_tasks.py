@@ -1,6 +1,6 @@
 """Tests for Celery tasks."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -100,32 +100,36 @@ class TestCeleryTasks:
         assert result.result == expected_result
         mock_asyncio_run.assert_called_once()
 
+    @patch("tubeatlas.tasks._download_channel_async", new_callable=AsyncMock)
     @patch("tubeatlas.tasks.asyncio.run")
     def test_download_channel_retry_on_api_error(
-        self, mock_asyncio_run, celery_eager_mode
+        self, mock_asyncio_run, mock_async_func, celery_eager_mode
     ):
         """Test that channel download retries on API errors."""
         from celery.exceptions import Retry
 
         from tubeatlas.utils.exceptions import QuotaExceededError
 
-        # Mock the async function to raise an API error
+        # Configure the async mock to raise an API error
+        mock_async_func.side_effect = QuotaExceededError("Quota exceeded")
         mock_asyncio_run.side_effect = QuotaExceededError("Quota exceeded")
 
         # Execute the task - should raise Retry exception since we're in eager mode
         with pytest.raises(Retry):
             download_channel.apply(args=["https://www.youtube.com/channel/UC_test"])
 
+    @patch("tubeatlas.tasks._download_video_async", new_callable=AsyncMock)
     @patch("tubeatlas.tasks.asyncio.run")
     def test_download_video_retry_on_api_error(
-        self, mock_asyncio_run, celery_eager_mode
+        self, mock_asyncio_run, mock_async_func, celery_eager_mode
     ):
         """Test that video download retries on API errors."""
         from celery.exceptions import Retry
 
         from tubeatlas.utils.exceptions import TransientAPIError
 
-        # Mock the async function to raise an API error
+        # Configure the async mock to raise an API error
+        mock_async_func.side_effect = TransientAPIError("API temporarily unavailable")
         mock_asyncio_run.side_effect = TransientAPIError("API temporarily unavailable")
 
         # Execute the task - should raise Retry exception since we're in eager mode
