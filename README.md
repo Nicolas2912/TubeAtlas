@@ -24,33 +24,33 @@ The system is designed with a clean, scalable architecture that separates concer
 ```mermaid
 graph TD
     subgraph "Input Layer"
-        A[YouTube Channels/Videos] --> B(YouTube Service)
+        A["YouTube Channels/Videos"] --> B("YouTube Service")
     end
 
     subgraph "Processing Layer (Async)"
-        B --> C{Celery + Redis}
-        C --> D[Transcript Service]
-        D --> E[RAG Pipeline]
+        B --> C{"Celery + Redis"}
+        C --> D["Transcript Service"]
+        D --> E["RAG Pipeline"]
     end
 
     subgraph "RAG Pipeline"
         direction LR
-        E_Chunk[Chunking<br/>(Semantic, Fixed)]
-        E_Embed[Embedding<br/>(OpenAI)]
-        E_KG[Graph Extraction<br/>(LLM)]
-        E_Store[Vector Store<br/>(FAISS)]
+        E_Chunk["Chunking<br/>(Semantic, Fixed)"]
+        E_Embed["Embedding<br/>(OpenAI)"]
+        E_KG["Graph Extraction<br/>(LLM)"]
+        E_Store["Vector Store<br/>(FAISS)"]
         E_Chunk --> E_Embed --> E_Store
         E_Chunk --> E_KG
     end
 
     subgraph "Data Persistence"
-        E --> F[SQLite Database<br/>(Metadata, KGs)]
-        E --> G[FAISS Vector Store<br/>(Embeddings)]
+        E --> F["SQLite Database<br/>(Metadata, KGs)"]
+        E --> G["FAISS Vector Store<br/>(Embeddings)"]
     end
 
     subgraph "API & Query Layer"
-        H[User] --> I(FastAPI)
-        I --> J[Chat & KG Services]
+        H["User"] --> I("FastAPI")
+        I --> J["Chat & KG Services"]
         J --> E
         J --> F
         J --> G
