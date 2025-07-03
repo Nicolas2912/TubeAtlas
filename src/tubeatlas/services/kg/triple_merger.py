@@ -11,6 +11,15 @@ from typing import Any, Dict, List, Sequence, Tuple
 import networkx as nx
 from networkx.readwrite import json_graph
 
+import numpy as np  # type: ignore
+
+try:
+    import faiss  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover – optional dependency
+    faiss = None  # type: ignore
+
+from .embeddings import embed_text
+
 # ---------------------------------------------------------------------------
 # Data Structures
 # ---------------------------------------------------------------------------
@@ -116,6 +125,12 @@ class TripleMerger:  # noqa: D101
         self._sig_idx: Dict[str, Tuple[str, str, int]] = {}
         self._build_signature_index()
 
+        # Embedding store: parallel lists for fallback & mapping idx→signature
+        self._embeddings: List[np.ndarray] = []
+        self._embedding_sigs: List[str] = []
+        self._faiss_index = None
+        self._build_embeddings_index()
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -126,12 +141,22 @@ class TripleMerger:  # noqa: D101
 
         for t in triples:
             sig = t.signature
+
             if sig in self._sig_idx:  # exact dup
                 self._update_edge_attrs(sig, t)
                 stats.exact_dupes += 1
                 continue
 
-            self._add_edge(t)
+            # ---------- fuzzy duplicate check ----------
+            emb = embed_text(f"{t.subject} {t.predicate} {t.object}")
+            dup_sig = self._find_fuzzy_duplicate(emb)
+            if dup_sig:
+                self._update_edge_attrs(dup_sig, t)
+                stats.fuzzy_dupes += 1
+                continue
+
+            # brand-new triple
+            self._add_edge(t, emb)
             stats.inserted += 1
 
         # Persist changes eagerly for now.
@@ -162,7 +187,7 @@ class TripleMerger:  # noqa: D101
         edge_data["sources"] = sources[-10:]
         edge_data["last_seen"] = datetime.now(tz=timezone.utc).isoformat()
 
-    def _add_edge(self, t: Triple) -> None:  # noqa: D401
+    def _add_edge(self, t: Triple, emb: np.ndarray | None = None) -> None:  # noqa: D401
         """Add a brand-new triple as edge with initial attributes."""
         # Ensure nodes exist (NetworkX adds automatically on add_edge).
         edge_key = self.graph.add_edge(
@@ -178,6 +203,16 @@ class TripleMerger:  # noqa: D101
         )
         # Store signature index mapping
         self._sig_idx[t.signature] = (t.subject, t.object, edge_key)
+
+        # store embedding
+        if emb is None:
+            emb = embed_text(f"{t.subject} {t.predicate} {t.object}")
+
+        # At this point emb is guaranteed to be ndarray
+        self._embeddings.append(emb)
+        self._embedding_sigs.append(t.signature)
+        if self._faiss_index is not None:
+            self._faiss_index.add(emb.reshape(1, -1))  # type: ignore[arg-type]
 
     # ------------------------------------------------------------------
     # Persistence helpers
@@ -209,3 +244,48 @@ class TripleMerger:  # noqa: D101
             sig = data.get("signature")
             if sig:
                 self._sig_idx[sig] = (u, v, key)
+
+    # ------------------------------------------------------------------
+    # Embedding / fuzzy helpers
+    # ------------------------------------------------------------------
+
+    def _build_embeddings_index(self) -> None:  # noqa: D401
+        for _, _, _, data in self.graph.edges(keys=True, data=True):
+            sig = data.get("signature")
+            if not sig:
+                continue
+            # Build from stored raw string if present else skip
+            subj = data.get("source", "")
+            pred = data.get("predicate", "")
+            obj = data.get("target", "")
+            emb = embed_text(f"{subj} {pred} {obj}")
+            self._embeddings.append(emb)
+            self._embedding_sigs.append(sig)
+
+        if faiss is not None and self._embeddings:
+            dim = self._embeddings[0].shape[0]
+            self._faiss_index = faiss.IndexFlatIP(dim)
+            mat = np.stack(self._embeddings).astype(np.float32)
+            self._faiss_index.add(mat)
+
+    def _find_fuzzy_duplicate(self, emb: np.ndarray) -> str | None:  # noqa: D401
+        if not self._embeddings:
+            return None
+
+        if self._faiss_index is not None:
+            emb = emb.astype(np.float32).reshape(1, -1)
+            scores, idxs = self._faiss_index.search(emb, k=1)
+            best_score = float(scores[0][0])
+            if best_score >= self.sim_thr:
+                return self._embedding_sigs[int(idxs[0][0])]
+            return None
+
+        # Fallback: brute cosine similarity
+        best_sim = -1.0
+        best_sig = None
+        for sig, e in zip(self._embedding_sigs, self._embeddings, strict=False):
+            sim = float(e @ emb / (np.linalg.norm(e) * np.linalg.norm(emb)))
+            if sim > best_sim:
+                best_sim = sim
+                best_sig = sig
+        return best_sig if best_sim >= self.sim_thr else None
