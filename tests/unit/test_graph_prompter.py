@@ -149,8 +149,8 @@ class TestGraphPrompterConfig:
         """Test default configuration values."""
         config = GraphPrompterConfig()
 
-        assert config.primary_model == "gpt-3.5-turbo"
-        assert config.fallback_model == "gpt-4"
+        assert config.primary_model == "openai/gpt-4.1-mini"
+        assert config.fallback_model == "openai/gpt-4.1-mini"
         assert config.primary_max_tokens == 4000
         assert config.fallback_max_tokens == 8000
         assert config.temperature == 0.0
@@ -176,7 +176,7 @@ class TestGraphPrompterConfig:
         assert config.temperature == 0.5
         assert config.batch_size == 10
         # Other values should be defaults
-        assert config.fallback_model == "gpt-4"
+        assert config.fallback_model == "openai/gpt-4.1-mini"
 
 
 class TestGraphPrompter:

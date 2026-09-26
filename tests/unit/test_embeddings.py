@@ -75,6 +75,6 @@ def test_metadata_properties(monkeypatch):
     mock_openai(monkeypatch)
     embedder = OpenAIEmbedder()
 
-    spec = embedder.MODEL_SPECS[embedder.model]
+    spec = embedder.MODEL_SPECS[embedder.model.removeprefix("openai/")]
     assert embedder.get_embedding_dimension() == spec["dimensions"]
     assert embedder.get_max_input_length() == spec["max_tokens"]

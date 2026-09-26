@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # API Keys
-    openai_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_chat_model: str = "openai/gpt-4.1-mini"
+    openrouter_embedding_model: str = "openai/text-embedding-3-small"
     google_api_key: Optional[str] = None
     youtube_api_key: Optional[str] = None
 

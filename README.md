@@ -36,7 +36,7 @@ graph TD
     subgraph "RAG Pipeline"
         direction LR
         E_Chunk["Chunking<br/>(Semantic, Fixed)"]
-        E_Embed["Embedding<br/>(OpenAI)"]
+        E_Embed["Embedding<br/>(OpenRouter)"]
         E_KG["Graph Extraction<br/>(LLM)"]
         E_Store["Vector Store<br/>(FAISS)"]
         E_Chunk --> E_Embed --> E_Store
@@ -83,7 +83,7 @@ graph TD
 | **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com/)                                                                    |
 | **Database**          | [SQLite](https://www.sqlite.org/index.html) with [SQLAlchemy](https://www.sqlalchemy.org/) (Async)          |
 | **Async Tasks**       | [Celery](https://docs.celeryq.dev/en/stable/) with [Redis](https://redis.io/) Broker                          |
-| **LLM Integration**   | [LangChain](https://www.langchain.com/), [OpenAI API](https://openai.com/blog/openai-api)                    |
+| **LLM Integration**   | [LangChain](https://www.langchain.com/), [OpenRouter](https://openrouter.ai/) via the OpenAI-compatible API |
 | **Vector Store**      | [FAISS](https://faiss.ai/) (Facebook AI Similarity Search)                                                    |
 | **Dependency Mgmt**   | [Poetry](https://python-poetry.org/)                                                                        |
 | **Containerization**  | [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/)                       |
@@ -99,7 +99,8 @@ graph TD
 
 -   [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 -   [Poetry](https://python-poetry.org/docs/#installation)
--   An OpenAI API key
+-   An OpenRouter API key
+-   A YouTube Data API v3 key
 
 ### Installation & Setup
 
@@ -114,7 +115,15 @@ graph TD
     ```bash
     cp .env.example .env
     ```
-    Now, edit the `.env` file and add your `OPENAI_API_KEY`.
+    Now, edit the `.env` file and add your `OPENROUTER_API_KEY` and `YOUTUBE_API_KEY`:
+    ```dotenv
+    OPENROUTER_API_KEY=your_openrouter_api_key_here
+    OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+    OPENROUTER_CHAT_MODEL=openai/gpt-4.1-mini
+    OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
+    YOUTUBE_API_KEY=your_youtube_api_key_here
+    ```
+    `GOOGLE_API_KEY` is an optional alternative to `YOUTUBE_API_KEY`. The OpenAI SDK is retained for compatibility with OpenRouter's API; no direct OpenAI API key is needed. Model names include the provider prefix even though requests go to OpenRouter.
 
 3.  **Install dependencies:**
     Use Poetry to install the project dependencies.
@@ -160,6 +169,13 @@ This will trigger an asynchronous background task to download and process the tr
 ## 🔬 Development & Testing
 
 This project is equipped with a full suite of development tools to ensure code quality and correctness.
+
+-   **Check live API connections:**
+    With your keys configured in `.env`, run:
+    ```bash
+    poetry run python scripts/check_api_connections.py
+    ```
+    This makes small live requests to check YouTube video metadata, OpenRouter chat, and OpenRouter embeddings. It uses API quota and may incur a small OpenRouter charge. Passing these checks verifies the API connections, not the complete ingestion or chat workflows.
 
 -   **Run tests:**
     Execute the test suite using `pytest`.

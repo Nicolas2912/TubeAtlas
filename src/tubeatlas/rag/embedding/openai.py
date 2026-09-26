@@ -7,12 +7,12 @@ OpenAI embeddings implementation with batching and rate limiting.
 
 import asyncio
 import logging
-import os
 import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from ...config.settings import settings
 from ...utils.token_counter import TokenCounter
 from .base import EmbedderInterface
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAIEmbedder(EmbedderInterface):
     """
-    OpenAI embeddings implementation with batching and rate limiting.
+    OpenRouter embeddings using the OpenAI-compatible SDK.
 
     Supports multiple OpenAI embedding models with automatic batching,
     rate limiting, and text chunking for long inputs.
@@ -67,7 +67,7 @@ class OpenAIEmbedder(EmbedderInterface):
 
     def __init__(
         self,
-        model: str = "text-embedding-3-small",
+        model: Optional[str] = None,
         api_key: Optional[str] = None,
         batch_size: int = 100,
         max_retries: int = 3,
@@ -77,8 +77,8 @@ class OpenAIEmbedder(EmbedderInterface):
         Initialize OpenAI embedder.
 
         Args:
-            model: OpenAI embedding model name
-            api_key: OpenAI API key (defaults to environment variable)
+            model: OpenRouter model ID, or a supported bare OpenAI model name
+            api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY in settings)
             batch_size: Number of texts to process in each batch
             max_retries: Maximum number of retry attempts
             request_timeout: Request timeout in seconds
@@ -89,23 +89,29 @@ class OpenAIEmbedder(EmbedderInterface):
                 "Install with: pip install openai tenacity"
             )
 
-        if model not in self.MODEL_SPECS:
+        model = model or settings.openrouter_embedding_model
+        spec_name = model.removeprefix("openai/")
+        if spec_name not in self.MODEL_SPECS:
             raise ValueError(
                 f"Unsupported model: {model}. Supported models: {list(self.MODEL_SPECS.keys())}"
             )
 
         self.model = model
+        self.api_model = model if "/" in model else f"openai/{model}"
+        self.token_model = spec_name
         self.batch_size = batch_size
         self.max_retries = max_retries
         self.request_timeout = request_timeout
 
-        # Initialize OpenAI client
+        # Keep the SDK, but send all requests and credentials to OpenRouter.
         self.client = openai.OpenAI(
-            api_key=api_key or os.getenv("OPENAI_API_KEY"), timeout=request_timeout
+            api_key=api_key or settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+            timeout=request_timeout,
         )
 
         # Model specifications
-        self.model_spec = self.MODEL_SPECS[model]
+        self.model_spec = self.MODEL_SPECS[spec_name]
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
@@ -188,7 +194,7 @@ class OpenAIEmbedder(EmbedderInterface):
             A list of embedding vectors.
         """
         try:
-            response = self.client.embeddings.create(model=self.model, input=texts)
+            response = self.client.embeddings.create(model=self.api_model, input=texts)
             # The API returns embeddings in the same order as the input
             sorted_embeddings = sorted(response.data, key=lambda e: e.index)
             return [item.embedding for item in sorted_embeddings]
@@ -212,7 +218,7 @@ class OpenAIEmbedder(EmbedderInterface):
         if not chunks:
             # Fallback: truncate text
             truncated = TokenCounter.truncate_to_token_limit(
-                text, self.model_spec["max_tokens"], self.model
+                text, self.model_spec["max_tokens"], self.token_model
             )
             return self._embed_batch([truncated])[0]
 
@@ -236,7 +242,7 @@ class OpenAIEmbedder(EmbedderInterface):
         Returns:
             True if text is too long
         """
-        token_count = TokenCounter.count(text, self.model)
+        token_count = TokenCounter.count(text, self.token_model)
         return token_count > self.model_spec["max_tokens"]
 
     def get_embedding_dimension(self) -> int:
@@ -269,6 +275,6 @@ class OpenAIEmbedder(EmbedderInterface):
         Returns:
             Estimated cost in USD
         """
-        total_tokens = sum(TokenCounter.count(text, self.model) for text in texts)
+        total_tokens = sum(TokenCounter.count(text, self.token_model) for text in texts)
         cost_per_token = self.model_spec["cost_per_1k_tokens"] / 1000
         return total_tokens * cost_per_token

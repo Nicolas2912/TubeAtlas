@@ -17,6 +17,7 @@ from langchain_core.documents import Document
 from langchain_experimental.graph_transformers.llm import LLMGraphTransformer
 from langchain_openai import ChatOpenAI
 
+from ...config.settings import settings
 from ..chunking.base import Chunk
 
 logger = logging.getLogger(__name__)
@@ -59,8 +60,8 @@ class Triple:
 class GraphPrompterConfig:
     """Configuration for GraphPrompter."""
 
-    primary_model: str = "gpt-3.5-turbo"
-    fallback_model: str = "gpt-4"
+    primary_model: str = field(default_factory=lambda: settings.openrouter_chat_model)
+    fallback_model: str = field(default_factory=lambda: settings.openrouter_chat_model)
     primary_max_tokens: int = 4000
     fallback_max_tokens: int = 8000
     temperature: float = 0.0
@@ -121,7 +122,11 @@ class GraphPrompter:
 
         # Initialize primary components
         self._primary_llm = ChatOpenAI(
-            model=self.config.primary_model, temperature=self.config.temperature
+            model=self.config.primary_model,
+            temperature=self.config.temperature,
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+            timeout=30,
         )
         self._primary_transformer = LLMGraphTransformer(
             llm=self._primary_llm,
@@ -131,7 +136,11 @@ class GraphPrompter:
 
         # Initialize fallback components
         self._fallback_llm = ChatOpenAI(
-            model=self.config.fallback_model, temperature=self.config.temperature
+            model=self.config.fallback_model,
+            temperature=self.config.temperature,
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+            timeout=30,
         )
         self._fallback_transformer = LLMGraphTransformer(
             llm=self._fallback_llm,
