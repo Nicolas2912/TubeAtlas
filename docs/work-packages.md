@@ -10,13 +10,14 @@ Status: execution plan, written September 26, 2026. It breaks the [implementatio
 
 1. **One WP at a time, in order.** Start a WP only when every WP it depends on is done. Don't start features from later WPs early, even "quickly".
 2. **Done means verified.** A WP is done when every acceptance criterion is checked and `npm run check && npm test` passes. Record the evidence (commands run, results, what you clicked) in `docs/work-log.md`, one section per WP. If a criterion can't be met, say so there and stop; never tick it anyway.
-3. **One commit per WP**, message `WP-NN: <title>`, containing code, tests, and the work-log entry.
-4. **No new dependencies** beyond §3.2. If one seems necessary, write the reason in the work log before adding it. Prefer 30 lines of your own code over a package, as long as the result stays simple.
-5. **No speculative structure.** No generic repositories, service containers, plugin registries, event buses, state managers, or "utils" grab-bags. Create a file when code needs it.
-6. **No fake success.** No placeholder screens in the active path, no hardcoded sample data, and no endpoints that report success without doing the work. A feature that isn't built yet isn't shown.
-7. **Paid calls are opt-in.** `npm test` never touches the network. Live checks run only through the explicit scripts named below. Record the cost of every live run, which OpenRouter reports in `usage.cost`.
-8. **Evaluation data is protected.** Nothing from the three evaluation transcripts (sentences, names, aliases, or paraphrases) may appear in prompts, code, dictionaries, or unit-test fixtures. Tests use invented text.
-9. **Ask before exceeding limits.** Stop and ask the user if a live-spend cap would be exceeded or if a decision belongs to them (model, reasoning effort, dropping a requirement).
+3. **Keep this document current.** When a WP is done, in the same commit: set its status in the overview table (§5), tick its acceptance criteria, and correct any instruction or criterion that turned out wrong or contradictory. Add a short *As built* note under the WP for anything the next WP must know. The work log holds the detailed evidence; this document must always show the real status and correct instructions.
+4. **One commit per WP**, message `WP-NN: <title>`, containing code, tests, the work-log entry, and the updates to this document.
+5. **No new dependencies** beyond §3.2. If one seems necessary, write the reason in the work log before adding it. Prefer 30 lines of your own code over a package, as long as the result stays simple.
+6. **No speculative structure.** No generic repositories, service containers, plugin registries, event buses, state managers, or "utils" grab-bags. Create a file when code needs it.
+7. **No fake success.** No placeholder screens in the active path, no hardcoded sample data, and no endpoints that report success without doing the work. A feature that isn't built yet isn't shown.
+8. **Paid calls are opt-in.** `npm test` never touches the network. Live checks run only through the explicit scripts named below. Record the cost of every live run, which OpenRouter reports in `usage.cost`.
+9. **Evaluation data is protected.** Nothing from the three evaluation transcripts (sentences, names, aliases, or paraphrases) may appear in prompts, code, dictionaries, or unit-test fixtures. Tests use invented text.
+10. **Ask before exceeding limits.** Stop and ask the user if a live-spend cap would be exceeded or if a decision belongs to them (model, reasoning effort, dropping a requirement).
 
 ## 2. Refinements to the plan (already applied to the plan and spec)
 
@@ -49,13 +50,15 @@ server/
     config.ts          # Zod-validated env
     db.ts              # open(), migrate(), tx helper
     errors.ts          # AppError + JSON error handler
+    testing.ts         # createTestApp() for server tests (temp DATA_DIR)
     jobs.ts            # persisted sequential runner
+    validate.ts        # zValidator with the app's error format
     integrations/youtube.ts, openrouter.ts
-    routes/videos.ts, transcripts.ts, topics.ts, documents.ts, assets.ts, chat.ts, graph.ts, jobs.ts, search.ts, health.ts
-    services/import.ts, transcripts.ts, units.ts, retrieval.ts, documents.ts, assets.ts, chat.ts
+    routes/videos.ts, transcripts.ts, topics.ts, jobs.ts, documents.ts, assets.ts, chat.ts, graph.ts, search.ts
+    services/import.ts, videos.ts, topics.ts, transcripts.ts, units.ts, retrieval.ts, documents.ts, assets.ts, chat.ts
     services/graph/preprocess.ts, prompt.ts, extract.ts, validate.ts, verify.ts, assemble.ts, pipeline.ts
 shared/                # Zod contracts + pure functions used by both sides (no Node or DOM APIs)
-  api.ts, graph.ts, time.ts
+  api.ts, graph.ts, time.ts, ports.ts
 frontend/
   index.html  vite.config.ts  tsconfig.json
   src/main.tsx  api.ts  styles.css
@@ -75,7 +78,7 @@ Runtime:
 
 Dev: `typescript@^7.0`, `vite@^8.3`, `@vitejs/plugin-react@^6.1`, `@types/node@^26`, `@types/better-sqlite3`, `@types/react@^19.3`, `@types/react-dom@^19.3`.
 
-There's no linter or formatter beyond strict TypeScript. npm on Node 26 warns about unapproved install scripts: approve only what the build needs (better-sqlite3's native binary if prompted) and record it in the README.
+There's no linter or formatter beyond strict TypeScript. npm 11 on Node 26 asks for approval of package install scripts (`allowScripts` in `package.json`). `better-sqlite3@13` ships prebuilt binaries for linux/darwin/win32 on x64 and arm64, so its `node-gyp rebuild` script is **denied** (`"allowScripts": { "better-sqlite3": false }`) and no compiler is needed. Deny or approve any future script explicitly, and record why in the README.
 
 ### 3.3 Scripts
 
@@ -86,7 +89,7 @@ There's no linter or formatter beyond strict TypeScript. npm on Node 26 warns ab
   "scripts": {
     "dev": "node scripts/dev.ts",                          // spawns dev:api + dev:web, kills both on exit
     "dev:api": "node --watch --env-file-if-exists=.env server/src/main.ts",
-    "dev:web": "vite --config frontend/vite.config.ts",   // port 5173, proxies /api → 127.0.0.1:5170
+    "dev:web": "vite --config frontend/vite.config.ts",   // port 5171 (shared/ports.ts), proxies /api → 127.0.0.1:5170
     "build": "vite build --config frontend/vite.config.ts",  // → frontend/dist
     "start": "node --env-file-if-exists=.env server/src/main.ts",  // serves API + frontend/dist on 127.0.0.1:5170
     "db:migrate": "node --env-file-if-exists=.env server/src/db.ts --migrate",
@@ -135,27 +138,29 @@ There's no linter or formatter beyond strict TypeScript. npm on Node 26 warns ab
 
 Overview (→ = depends on):
 
-| WP | Title | Depends on | Plan milestone |
-| --- | --- | --- | --- |
-| 00 | Cutover and Node skeleton | none | 0 |
-| 01 | Database, config, server shell | 00 | 0 |
-| 02 | OpenRouter adapter and provider check | 01 | 0 |
-| 03 | YouTube import, transcripts, job runner | 01 | 0–1 |
-| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 |
-| 05 | Watch & Read | 04 | 1 |
-| 06 | Documents and attachments | 05 | 2 |
-| 07 | Evidence units and retrieval | 02, 03 | 3 |
-| 08 | Chat | 06, 07 | 3 |
-| 09 | KG evaluation references (no model runs) | 07 | 4 |
-| 10 | KG pipeline | 02, 07, 09 | 4 |
-| 11 | Knowledge Graph view | 05, 10 | 4 |
-| 12 | KG evaluation, tuning, report, user spot-check | 11 | 4 |
-| 13 | Search, All documents, polish, release | 12 | 5 |
-| 14 | Visual Studio (optional, only on request) | 13 | 6 |
+| WP | Title | Depends on | Plan milestone | Status |
+| --- | --- | --- | --- | --- |
+| 00 | Cutover and Node skeleton | none | 0 | **Done** 2026-09-27, `3d0669f` ([log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27)) |
+| 01 | Database, config, server shell | 00 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-01-database-config-server-shell-2026-09-27)) |
+| 02 | OpenRouter adapter and provider check | 01 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27)) |
+| 03 | YouTube import, transcripts, job runner | 01 | 0–1 | **Done** 2026-09-27 ([log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27)) |
+| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
+| 05 | Watch & Read | 04 | 1 | Not started |
+| 06 | Documents and attachments | 05 | 2 | Not started |
+| 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
+| 08 | Chat | 06, 07 | 3 | Not started |
+| 09 | KG evaluation references (no model runs) | 07 | 4 | Not started |
+| 10 | KG pipeline | 02, 07, 09 | 4 | Not started |
+| 11 | Knowledge Graph view | 05, 10 | 4 | Not started |
+| 12 | KG evaluation, tuning, report, user spot-check | 11 | 4 | Not started |
+| 13 | Search, All documents, polish, release | 12 | 5 | Not started |
+| 14 | Visual Studio (optional, only on request) | 13 | 6 | Not started |
 
 ---
 
 ### WP-00: Cutover and Node skeleton
+
+**Status:** done on 2026-09-27 (`3d0669f`); evidence in the [work log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27).
 
 **Goal:** the repository is a clean Node 26 TypeScript project with the Python stack gone, and `npm ci && npm run check && npm test` pass on a fresh clone.
 
@@ -186,15 +191,23 @@ Overview (→ = depends on):
 8. Tell the user their local Node is 26.8.1 and `engines` requires ≥ 26.10. The agent can upgrade it if it has permission; otherwise it asks the user.
 
 **Acceptance criteria.**
-- [ ] `git ls-files` contains no `.py`, Poetry, Docker, or Python CI files. `legacy/` is unchanged.
-- [ ] A fresh clone passes `npm ci && npm run check && npm test`.
-- [ ] `npm run dev` serves the frontend at `http://127.0.0.1:5173`, and `/api/health` answers `{ ok: true }` through the proxy.
-- [ ] `npm run build && npm start` serves the built page and `/api/health` from `http://127.0.0.1:5170`. (Static serving uses `serveStatic` from `@hono/node-server/serve-static`, with an SPA fallback to `index.html` for non-`/api` GET requests only.)
-- [ ] `output/ui-concepts/` is committed.
+- [x] Outside `legacy/`, `git ls-files` contains no `.py`, Poetry, Docker, or Python CI files. `legacy/` is unchanged (it still contains its own Python files, which is expected).
+- [x] A fresh clone passes `npm ci && npm run check && npm test`.
+- [x] `npm run dev` serves the frontend at `http://127.0.0.1:5171` (5173 until WP-01, see its as-built notes), and `/api/health` answers `{ ok: true }` through the proxy.
+- [x] `npm run build && npm start` serves the built page and `/api/health` from `http://127.0.0.1:5170`. (Static serving uses `serveStatic` from `@hono/node-server/serve-static`, with an SPA fallback to `index.html` for non-`/api` GET requests only.) Unknown `/api/...` paths return a JSON `404 NOT_FOUND`, never the page.
+- [x] `output/ui-concepts/` is committed (it already was, in `eeb0f10`).
+
+**As built** (what later WPs need to know):
+- `server/src/app.ts` exports `createApp()` returning `{ app, api }`, and `AppType` is the type of `api`. Feature routes are added to `api` (mounted at `/api`). WP-01 changes the signature to `createApp(deps)` as specified.
+- Hono gotcha: a mounted sub-app's `notFound` handler is ignored. (Superseded in WP-01: the root app's `notFound` now returns the JSON 404, and the frontend handlers skip `/api` paths.)
+- `server/src/main.ts` reads `PORT` directly; WP-01 replaces this with `config.ts`.
+- Local Node is 26.10.0, managed by mise with global setting `node = "26"`.
 
 ---
 
 ### WP-01: Database, config, server shell
+
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-01-database-config-server-shell-2026-09-27).
 
 **Goal:** a persistent SQLite database with the full first-release schema, plus a hardened server shell every later WP plugs into.
 
@@ -352,12 +365,12 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 ```
 
 4. `app.ts`, middleware in this order:
-   - **Host guard:** reject any request whose `Host` isn't `127.0.0.1:PORT`, `localhost:PORT`, or (in dev) `…:5173`, with `403 BAD_HOST`. This blocks DNS-rebinding attacks.
+   - **Host guard:** reject any request whose `Host` isn't `127.0.0.1` or `localhost` on `PORT` or on the dev web port `DEV_WEB_PORT` (5171, from `shared/ports.ts`), with `403 BAD_HOST`. This blocks DNS-rebinding attacks. The dev port is always allowed (not only in dev): only a loopback server on that port can send that Host, so it costs nothing.
    - **Origin guard for non-GET requests:** if an `Origin` header is present, it must be one of those hosts (`403 BAD_ORIGIN`).
    - `bodyLimit` of 1 MB on JSON routes (the upload route sets 25 MB).
    - No CORS middleware at all.
 5. `GET /api/health` returns `{ ok: true, aiConfigured, youtubeKey }`. There's no per-request database health check.
-6. **Startup recovery** in `main.ts`, before the job runner starts:
+6. **Startup recovery:** `recoverInterrupted(db)` in `db.ts`, called by `main.ts` right after migrating and before anything else runs (later: before the job runner starts):
 
    ```sql
    UPDATE jobs SET status='interrupted', finished_at=now WHERE status='running';
@@ -365,20 +378,31 @@ CREATE INDEX jobs_queue ON jobs(status, id);
    ```
 
 **Acceptance criteria.**
-- [ ] Tests cover:
+- [x] Tests cover:
   - a fresh DB migrates;
   - a second startup is a no-op;
   - an edited applied migration throws `MIGRATION_EDITED`;
   - foreign-key cascade: deleting a video removes its transcripts, documents, and jobs;
   - the partial unique indexes reject a second current transcript, a second active job, and a second generating message;
   - the documents `CHECK` constraints hold.
-- [ ] Tests: a request with `Host: evil.example` returns `403 BAD_HOST`; a POST with a foreign `Origin` returns `403`; an unknown thrown error is returned as `500 INTERNAL` without its message.
-- [ ] Recovery test: a `running` job and a `generating` message become `interrupted` when the app is created.
-- [ ] Deleting `data/` and starting again creates a working empty database.
+- [x] Tests: a request with `Host: evil.example` returns `403 BAD_HOST`; a POST with a foreign `Origin` returns `403`; an unknown thrown error is returned as `500 INTERNAL` without its message.
+- [x] Recovery test: a `running` job and a `generating` message become `interrupted` by the startup recovery (`recoverInterrupted`), also verified across a real server restart.
+- [x] Starting with an empty `DATA_DIR`, or after deleting only `data/tubeatlas.sqlite*`, creates a working, migrated database. (Never delete all of `data/`: the evaluation transcript snapshots live in `data/evaluation/`.)
+
+**As built** (what later WPs need to know):
+- `createApp({ db, config })` returns `{ app, api }`; `AppType` is the type of `api`. Add feature routes by **chaining** on `api` in `createApp` (the chain is what gives the typed client its types), or mount route modules with `api.route(...)`. Later WPs extend `AppDeps` with `youtube`, `openrouter`, etc.
+- Unknown `/api` paths: the root app's `notFound` returns the JSON `404 NOT_FOUND`; the static and SPA handlers call `next()` for `/api` paths, so routes can't be shadowed by the frontend fallback.
+- ~~The 1 MB `bodyLimit` is applied to the whole `api` sub-app.~~ Changed in WP-03: `bodyLimits()` in `app.ts` applies 1 MB by default and a per-route limit from its `large` list (manual transcripts: 5 MB). WP-06 adds its upload route (25 MB) to that list.
+- `server/src/testing.ts` provides `createTestApp(env?)`: a real app on a fresh temp `DATA_DIR`, with `request(path, init)` sending loopback-host requests, and `cleanup()`. Tests add ad-hoc routes to `app` after creation when they need one.
+- `AppError(status, code, message, retryable)` and `errorBody()` live in `server/src/errors.ts`.
+- Dev web port is **5171** (`shared/ports.ts`), not Vite's default 5173, which another local project on this machine already uses.
+- Each migration runs in its own transaction; a process killed during startup leaves the database consistent (seen once: an empty file, migrated on the next start).
 
 ---
 
 ### WP-02: OpenRouter adapter and provider check
+
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27).
 
 **Goal:** one small, fully controlled integration module for chat, streaming chat, embeddings, and structured output, plus an opt-in live check that proves each works with the user's key. This is milestone 0's Astra check.
 
@@ -390,13 +414,13 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `createOpenRouter({ apiKey, baseUrl, fetch = globalThis.fetch })` returns `{ chat, chatStream, embed, structured }`.
   - Every request is `POST {baseUrl}/chat/completions` (or `/embeddings`) with headers `Authorization: Bearer`, `Content-Type: application/json`, and `X-Title: TubeAtlas`, and passes an `AbortSignal` (caller-provided, combined with a timeout: chat 120 s, structured 600 s).
   - **No retries** of any kind inside the adapter.
-- `chat({ model, messages, maxTokens, signal })` returns `{ text, model, provider, finishReason, usage, generationId }`.
+- `chat({ model, messages, maxTokens, signal })` returns `{ text, model, provider, finishReason, usage, generationId, latencyMs }`.
 - `chatStream({ ... , onDelta })`: send `stream: true` and parse the response body as SSE.
   - Read lines and ignore lines starting with `:`, which are OpenRouter keep-alive comments.
   - For `data: [DONE]`, end the stream.
   - Otherwise parse the JSON. If it has `error`, throw `PROVIDER_ERROR`. Otherwise append `choices[0].delta.content`, and keep `usage`, `model`, and `provider` from the chunk that carries them.
   - Return the same result shape as `chat`.
-- `embed({ model, input: string[] })` returns `Float32Array[]`, in input order (sort `data` by `index`), L2-normalized. It checks that all vectors have the same dimension.
+- `embed({ model, input: string[], signal })` returns `{ vectors: Float32Array[], model, usage }`: vectors in input order (sort `data` by `index`), L2-normalized, all with the same dimension. Usage is returned because WP-07 logs embedding cost. Empty input makes no call.
 - `structured({ model, reasoningEffort, schemaName, jsonSchema, messages, maxTokens, seed, signal })` sends exactly this body:
   ```json
   { "model": "...", "reasoning": { "effort": "low", "exclude": true }, "provider": { "require_parameters": true },
@@ -422,17 +446,28 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   It exits non-zero on any failure. Expected total cost is under $0.01. On September 26, 2026 the same four request shapes worked: Astra routed to Azure in about 2.5 s at $0.0037.
 
 **Acceptance criteria.**
-- [ ] Unit tests with a fake `fetch` cover:
+- [x] Unit tests with a fake `fetch` cover:
   - SSE parsing (keep-alive comments, multi-line chunks split across reads, `[DONE]`, mid-stream error);
   - a `structured` refusal, `length`, and model mismatch each fail with the right code;
   - embeddings are reordered by `index` and normalized;
   - the request body contains `provider.require_parameters` and `reasoning.effort` and no `temperature`;
   - there is no retry (the fake counts calls).
-- [ ] `npm run check:providers` passes live, and its output (without secrets) is pasted into the work log.
+- [x] `npm run check:providers` passes live, and its output (without secrets) is pasted into the work log.
+
+**As built** (what later WPs need to know):
+- `server/src/integrations/openrouter.ts`: `createOpenRouter({ apiKey, baseUrl, fetch?, timeoutsMs? })` → `{ chat, chatStream, embed, structured }`, plus the exported `sseData()` parser. Types: `ChatMessage`, `Usage` (`{ promptTokens, completionTokens, reasoningTokens, cost: number | null }`), `ChatResult`, `StructuredResult`, `EmbedResult`, `OpenRouter`.
+- **Cancellation:** if the caller's `signal` aborts, the original `AbortError` propagates unchanged; check `signal.aborted` to tell cancel from failure. Text already passed to `onDelta` stays with the caller, which is how WP-08 saves partial answers as `incomplete`.
+- **Error codes** (all `AppError`): `PROVIDER_HTTP_<status>` (502; retryable for 429/5xx, and the provider's own short message is included), `PROVIDER_UNREACHABLE` (502, retryable), `PROVIDER_TIMEOUT` (504, retryable), `PROVIDER_ERROR` (502, retryable: a mid-stream error or a 200 without choices), `PROVIDER_BAD_RESPONSE` (502, retryable), and for `structured` only `OUTPUT_TRUNCATED`, `CONTENT_FILTERED`, `MODEL_REFUSED`, `MODEL_MISMATCH`, `INVALID_JSON` (502, not retryable). "Retryable" means a user may retry; nothing retries automatically.
+- `MODEL_MISMATCH` is enforced only in `structured` (the KG). Chat results report the answering model.
+- The embeddings API reports the model **without** the provider prefix (`text-embedding-3-small`). Store and compare the **configured** `OPENROUTER_EMBEDDING_MODEL` in `chunks.embedding_model`, not the returned name.
+- At low effort on a trivial prompt, Astra used 0 reasoning tokens; the KG prompt will show real numbers.
+- The adapter is not yet wired into `createApp`. WP-08 adds `openrouter: OpenRouter | null` to `AppDeps` (null without a key → `503 AI_NOT_CONFIGURED`).
 
 ---
 
 ### WP-03: YouTube import, transcripts, job runner
+
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27).
 
 **Goal:** a pasted YouTube URL becomes a persisted video with a timed transcript through a durable job. Manual transcript fallback works.
 
@@ -445,12 +480,12 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **Metadata:**
   - With a key: `GET https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=…&key=…`. Take title, `channelTitle`, the best thumbnail, and duration (ISO 8601 → seconds).
   - Without a key: `GET https://www.youtube.com/oembed?url=…&format=json` (title, `author_name`, `thumbnail_url`; duration `null`).
-  - No result becomes `404 VIDEO_NOT_FOUND`; a network failure becomes `502 YOUTUBE_UNREACHABLE` (retryable).
+  - No result becomes `404 VIDEO_NOT_FOUND`; a network failure becomes `502 YOUTUBE_UNREACHABLE` (retryable). If the Data API rejects the key or quota (non-200), fall back to oEmbed. oEmbed 401/403 (private or embedding disabled) becomes `422 VIDEO_RESTRICTED`.
   - Ignore YouTube's `caption` flag (it was wrong for the test videos).
 - **Transcript adapter:** call `YoutubeTranscript.fetchTranscript(id, { fetch: recordingFetch })`. `recordingFetch` wraps `fetch`, and for responses whose URL contains `/api/timedtext` it clones the response and records the format:
   - `<p t="` means **srv3, milliseconds**;
   - `<text start="` means **classic, seconds**;
-  - anything else is an `UNKNOWN_CAPTION_FORMAT` failure.
+  - anything else is an `UNKNOWN_CAPTION_FORMAT` failure. Check this **before** treating an empty result as `no_captions`: the package also returns `[]` for a format it can't read.
 
   Convert to `{ id, start, end, text }` in seconds, with `id` counting from 0 and `end = start + duration`. Decode leftover HTML entities. Keep empty-text segments out. Map errors:
   - `…DisabledError` / `…NotAvailableError` → `no_captions`;
@@ -458,7 +493,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `…VideoUnavailableError` → `failed` with message "Video unavailable";
   - network errors → retried up to 2 times with 1 s and 3 s delays (free and safe), then `failed`.
 - **Import flow**, `POST /api/videos/import { url, topicId? }`:
-  1. Parse the ID. If the video exists, return `200 { video, job: activeJobOrNull }`.
+  1. Parse the ID. If the video exists, return `200 { video, job: activeJobOrNull }` (and link the given topic to it, if any).
   2. Otherwise fetch metadata inside the request, insert the video (`transcript_status='pending'`), add the topic link if given, and enqueue a `transcript` job.
   3. Return `201 { video, job }`.
 - **Job runner (`jobs.ts`):**
@@ -466,18 +501,19 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `start()` processes jobs one at a time in `id` order: pick the oldest `queued`, set `running` and `started_at`, and call `handlers[kind](job, ctx)`. `ctx` provides `setStage(text)`, a `signal` (an `AbortController` stored in a `Map` so cancel can abort it), and `db`.
   - Handlers write their outputs in one transaction, and then the runner marks `succeeded` with `result_json`. On throw it marks `failed` with `error_code`/`error_message` taken from the `AppError`, or `JOB_FAILED` for unknown errors (details logged).
   - `cancel(id)`: a queued job becomes `cancelled`; a running job gets aborted and becomes `cancelled` when the handler exits.
-  - `retry(id)` creates a new job with the same kind and input (only if it was `failed`, `cancelled`, or `interrupted`).
+  - `retry(id)` creates a new job with the same kind and input (only if it was `failed`, `cancelled`, or `interrupted`; otherwise `409 JOB_NOT_RETRYABLE`).
+  - `stop()` stops taking new jobs and resolves when the current one finishes (tests; shutdown waits at most 3 s).
   - After an enqueue the loop wakes with `setImmediate`; it doesn't poll.
 - **Transcript job handler:**
   - stage `fetching captions` → adapter;
   - on success, insert a transcript (`revision = max + 1`, flip the previous `is_current` to 0 in the same transaction, `sha256` of `segments_json`, `plain_text` = texts joined by spaces) and set `transcript_status='ready'`;
-  - on a mapped failure, set the status and `transcript_error`, and the job **succeeds** with `result { status }`. A missing caption is an outcome, not a crash. Only unexpected errors fail the job.
-- **Manual transcript**, `POST /api/videos/:id/transcript { format: 'text'|'vtt'|'srt', content }`:
+  - on a mapped failure, set the status and `transcript_error`, and the job **succeeds** with `result { status }`. A missing caption is an outcome, not a crash. Only unexpected errors fail the job. If the video already has a transcript (e.g. pasted), a later failed fetch leaves its status `ready`.
+- **Manual transcript**, `POST /api/videos/:id/transcript { format: 'text'|'vtt'|'srt', content, language? }`:
   - `text` becomes one segment per non-empty paragraph with null times (`timed=0`, `source='paste_text'`).
   - `vtt`/`srt` are parsed with a small parser: cue times `hh:mm:ss.mmm` or `hh:mm:ss,mmm`, strip tags and cue settings, and skip empty cues (`timed=1`, `source='upload_timed'`).
   - Either way it creates a new current revision and sets `transcript_status='ready'`. Content is limited to 5 MB.
 - **Routes:**
-  - `GET /api/videos?topicId=` returns summaries with `topics[]`.
+  - `GET /api/videos?topicId=` returns summaries with `topics[]` and `activeJob` (`{ id, kind, status, stage }` or null).
   - `GET/PATCH/DELETE /api/videos/:id`. PATCH accepts `{ playbackSeconds?, topicIds? }`. DELETE removes rows via cascade, then deletes the video's asset files.
   - `GET /api/videos/:id/transcript` returns `{ transcriptId, revision, language, source, timed, segments }` or `404 NO_TRANSCRIPT`. Units are added in WP-07.
   - Topics: `GET/POST /api/topics`, `PATCH/DELETE /api/topics/:id`. Duplicate names return `409 TOPIC_EXISTS`.
@@ -485,7 +521,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **`scripts/fetch-transcript.ts <videoId>`:** writes `data/evaluation/<id>.transcript.json` in the existing snapshot format (`{ videoId, language, source, segments:[{id,start,duration,text}] }`) and prints its SHA-256. Used only if a snapshot is missing.
 
 **Acceptance criteria.**
-- [ ] Tests (fake YouTube adapter) cover:
+- [x] Tests (fake YouTube adapter) cover:
   - URL parsing for all accepted forms plus rejects;
   - import creates the video and a job, and a second import returns the existing video;
   - the job stores timed segments and reloading returns them identically;
@@ -495,7 +531,16 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - a duplicate enqueue returns the same job;
   - cancel and retry work;
   - deleting a video removes asset files.
-- [ ] Live check (manual, free), recorded in the work log. Run the server and import all three evaluation videos by URL. Resulting segment counts: `Vzaccv7-qNw` 316 (de), `jGD_UR4wMJc` 261 (en), `KIY0np5KDfE` 4,841 (en). If YouTube returns different captions today, record the new counts and hashes.
+- [x] Live check (manual, free), recorded in the work log. Run the server and import all three evaluation videos by URL. Resulting segment counts: `Vzaccv7-qNw` 316 (de), `jGD_UR4wMJc` 261 (en), `KIY0np5KDfE` 4,841 (en). If YouTube returns different captions today, record the new counts and hashes. (2026-09-27: all three identical to the snapshots, segment by segment.)
+
+**As built** (what later WPs need to know):
+- `AppDeps` is `{ db, config, youtube, jobs }`. `main.ts` builds `createYouTube({ apiKey })` and `createJobRunner(db, { transcript: transcriptJobHandler(youtube) })`, then calls `jobs.start()`. WP-10 adds the `graph` handler there.
+- Routes live in `server/src/routes/*.ts` as functions `xxxRoutes(deps)` returning a chained `Hono` app, mounted in `createApp` with `.route('/videos', …)`. Use `validate(target, schema)` from `server/src/validate.ts` (failures → `400 VALIDATION_FAILED`, bad path ids → `404 NOT_FOUND`). Request schemas live in `shared/api.ts`.
+- Response shapes: `VideoSummary` (`services/videos.ts`); `Transcript` `{ transcriptId, revision, language, source, timed, segments }`; `Job` `{ id, kind, videoId, status, stage, input, result, error: {code,message}|null, createdAt, startedAt, finishedAt }`. Import returns `{ video, job }` (201 new, 200 existing); retry returns the new job (201); deletes return 204.
+- Job runner API: `enqueue`, `cancel`, `retry`, `cancelForVideo`, `get`, `activeFor(kind, videoId)`, `start`, `stop`, `idle`. A handler receives `{ db, signal, setStage }`, writes its output in one transaction, returns a small result, and should call `signal.throwIfAborted()` before writing. If the handler resolves, the job is `succeeded`; if it throws after an abort, it's `cancelled`.
+- `createTestApp({ env?, youtube? })` returns `{ app, db, config, dataDir, jobs, request, json, cleanup }`, with the runner started. `cleanup` is async (`t.after(cleanup)`). The default `youtube` fails loudly if called.
+- Transcript segments: `{ id, start, end, text }` in seconds (rounded to ms). Rolling YouTube captions overlap in time; that's kept as is.
+- `scripts/fetch-transcript.ts` never overwrites an existing snapshot.
 
 ---
 
@@ -505,7 +550,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 **Scope.**
 - In: the router, `Shell`, `VideoLayout` (header, breadcrumb, four tabs), Library, Import dialog, Topics, Settings, `api.ts` hooks, `styles.css`, and `Markdown.tsx` (shared renderer).
-- Out: the content of the tabs. A tab appears only once its WP is done (rule 6).
+- Out: the content of the tabs. A tab appears only once its WP is done (rule 7).
 
 **Implementation details.**
 - **Routes** (`createBrowserRouter`):
@@ -933,7 +978,7 @@ Rules:
   6. The spot-check.
   7. The UI check.
 
-  Every prompt, schema, or processing change bumps its version and gets a CHANGELOG line (what, why, which failure it fixes). Evaluation-video content never goes into prompts or code (rule 8).
+  Every prompt, schema, or processing change bumps its version and gets a CHANGELOG line (what, why, which failure it fixes). Evaluation-video content never goes into prompts or code (rule 9).
 - Write the report at `evaluation/kg/reports/<date>-p<prompt>-s<schema>-r<processing>.md` with all §9.7 contents and verdict **PASS (pending user spot-check)**, **FAIL**, or **NOT EVALUATED**.
 - **Stop and ask the user** to fill in the spot-check. On their answer, follow spec §9.8. For a PASS, update the verdict to **PASS (user confirmed)**.
 
