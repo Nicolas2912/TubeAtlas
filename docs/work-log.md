@@ -52,3 +52,43 @@ One section per work package from [work-packages.md](work-packages.md): what was
 - The host guard always allows the dev web port, not only in dev (no security cost; avoids a mode switch).
 - Port 5173 was in use by another local project (`paperless-receipt-automation`'s Vite), which made `npm run dev` fail (`strictPort`). TubeAtlas now uses 5171.
 - Observed once: the launcher stopped the API while it was creating a fresh database (because Vite failed on the busy port). The result was an empty but consistent SQLite file that migrated normally on the next start. Migrations are transactional, so this is safe.
+
+## WP-02: OpenRouter adapter and provider check (2026-09-27)
+
+**Done**
+- `server/src/integrations/openrouter.ts`: native-fetch adapter with `chat`, `chatStream`, `embed`, and `structured`, plus an exported `sseData()` parser.
+  - One timeout per call covers both the request and reading the body: chat and stream 120 s, embeddings 60 s, structured 600 s; overridable for tests.
+  - No retries. Caller aborts propagate as `AbortError`; everything else becomes a typed `AppError`, and messages never contain the key or request bodies.
+  - `structured` sends exactly the specified body (explicit `reasoning.effort` with `exclude`, `provider.require_parameters`, `seed`, `max_tokens`, strict `json_schema`; no `temperature`/`top_p`). It refuses truncated, filtered, refused, wrong-model, or non-JSON answers.
+- `scripts/check-providers.ts` (`npm run check:providers`): four live calls; prints model, provider, latency, cost, and details; exits 1 on any failure. The structured probe uses an invented book record and validates the answer with Zod.
+
+**Verification**
+- `npm run check` passes; `npm test` 31/31 pass. The 12 new adapter tests cover:
+  - SSE: comments, pieces split mid-line and mid-CRLF, multi-line events, a final unterminated event, and multi-byte UTF-8 split across reads;
+  - streaming deltas in order with model, provider, usage, and finish reason kept, and nothing read after `[DONE]`;
+  - a mid-stream error (`PROVIDER_ERROR`, after the partial delta was delivered);
+  - a caller abort (`AbortError`, deltas kept);
+  - timeouts before and during streaming;
+  - HTTP 429/503 (retryable) and 400 (not retryable, provider message included);
+  - network failure, and a 200 with an error body;
+  - the exact `structured` body with no `temperature`/`top_p`;
+  - refusal, `length`, `content_filter`, model mismatch, and non-JSON answers;
+  - embeddings reordered and normalized, and invalid, zero, inconsistent, or missing vectors rejected;
+  - no call for empty input;
+  - every failure path makes exactly one call, and no error message contains the API key.
+- Live (`npm run check:providers`, 2026-09-27):
+
+  ```text
+  PASS chat       openai/gpt-4.1-mini via Azure, 1034 ms, cost $0.000008 — reply "OK"
+  PASS chatStream openai/gpt-4.1-mini via Azure, 1119 ms, cost $0.000008 — reply "OK" in 1 delta(s)
+  PASS embed      text-embedding-3-small via n/a, 225 ms, cost $0.000000 — 2 vectors × 1536 dims, norms 1.000/1.000
+  PASS structured openai/gpt-6-astra via Azure, 1569 ms, cost $0.002040 — effort low, reasoning tokens 0, {"title":"The Lighthouse Keeper's Almanac","year":1897,"author":null}
+  4/4 passed; reported cost $0.002056
+  ```
+
+- Failure path, at no cost: an invalid key gives 4 × `FAIL … PROVIDER_HTTP_401: OpenRouter returned HTTP 401: User not found.` and exit code 1; a missing key prints a pointer to `.env.example` and exits 1.
+
+**Deviations and notes**
+- `embed` returns `{ vectors, model, usage }` instead of bare vectors, because WP-07 must log embedding cost. `chat`/`chatStream` also return `latencyMs`. work-packages.md was updated.
+- The embeddings endpoint reports the model as `text-embedding-3-small` (no `openai/` prefix), so WP-07 must key stored vectors on the configured model name. Noted in WP-02's as-built notes.
+- Live spend for this WP: $0.002056.

@@ -141,7 +141,7 @@ Overview (→ = depends on):
 | --- | --- | --- | --- | --- |
 | 00 | Cutover and Node skeleton | none | 0 | **Done** 2026-09-27, `3d0669f` ([log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27)) |
 | 01 | Database, config, server shell | 00 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-01-database-config-server-shell-2026-09-27)) |
-| 02 | OpenRouter adapter and provider check | 01 | 0 | Not started |
+| 02 | OpenRouter adapter and provider check | 01 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27)) |
 | 03 | YouTube import, transcripts, job runner | 01 | 0–1 | Not started |
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
 | 05 | Watch & Read | 04 | 1 | Not started |
@@ -401,6 +401,8 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 ### WP-02: OpenRouter adapter and provider check
 
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27).
+
 **Goal:** one small, fully controlled integration module for chat, streaming chat, embeddings, and structured output, plus an opt-in live check that proves each works with the user's key. This is milestone 0's Astra check.
 
 **Scope.**
@@ -411,13 +413,13 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `createOpenRouter({ apiKey, baseUrl, fetch = globalThis.fetch })` returns `{ chat, chatStream, embed, structured }`.
   - Every request is `POST {baseUrl}/chat/completions` (or `/embeddings`) with headers `Authorization: Bearer`, `Content-Type: application/json`, and `X-Title: TubeAtlas`, and passes an `AbortSignal` (caller-provided, combined with a timeout: chat 120 s, structured 600 s).
   - **No retries** of any kind inside the adapter.
-- `chat({ model, messages, maxTokens, signal })` returns `{ text, model, provider, finishReason, usage, generationId }`.
+- `chat({ model, messages, maxTokens, signal })` returns `{ text, model, provider, finishReason, usage, generationId, latencyMs }`.
 - `chatStream({ ... , onDelta })`: send `stream: true` and parse the response body as SSE.
   - Read lines and ignore lines starting with `:`, which are OpenRouter keep-alive comments.
   - For `data: [DONE]`, end the stream.
   - Otherwise parse the JSON. If it has `error`, throw `PROVIDER_ERROR`. Otherwise append `choices[0].delta.content`, and keep `usage`, `model`, and `provider` from the chunk that carries them.
   - Return the same result shape as `chat`.
-- `embed({ model, input: string[] })` returns `Float32Array[]`, in input order (sort `data` by `index`), L2-normalized. It checks that all vectors have the same dimension.
+- `embed({ model, input: string[], signal })` returns `{ vectors: Float32Array[], model, usage }`: vectors in input order (sort `data` by `index`), L2-normalized, all with the same dimension. Usage is returned because WP-07 logs embedding cost. Empty input makes no call.
 - `structured({ model, reasoningEffort, schemaName, jsonSchema, messages, maxTokens, seed, signal })` sends exactly this body:
   ```json
   { "model": "...", "reasoning": { "effort": "low", "exclude": true }, "provider": { "require_parameters": true },
@@ -443,13 +445,22 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   It exits non-zero on any failure. Expected total cost is under $0.01. On September 26, 2026 the same four request shapes worked: Astra routed to Azure in about 2.5 s at $0.0037.
 
 **Acceptance criteria.**
-- [ ] Unit tests with a fake `fetch` cover:
+- [x] Unit tests with a fake `fetch` cover:
   - SSE parsing (keep-alive comments, multi-line chunks split across reads, `[DONE]`, mid-stream error);
   - a `structured` refusal, `length`, and model mismatch each fail with the right code;
   - embeddings are reordered by `index` and normalized;
   - the request body contains `provider.require_parameters` and `reasoning.effort` and no `temperature`;
   - there is no retry (the fake counts calls).
-- [ ] `npm run check:providers` passes live, and its output (without secrets) is pasted into the work log.
+- [x] `npm run check:providers` passes live, and its output (without secrets) is pasted into the work log.
+
+**As built** (what later WPs need to know):
+- `server/src/integrations/openrouter.ts`: `createOpenRouter({ apiKey, baseUrl, fetch?, timeoutsMs? })` → `{ chat, chatStream, embed, structured }`, plus the exported `sseData()` parser. Types: `ChatMessage`, `Usage` (`{ promptTokens, completionTokens, reasoningTokens, cost: number | null }`), `ChatResult`, `StructuredResult`, `EmbedResult`, `OpenRouter`.
+- **Cancellation:** if the caller's `signal` aborts, the original `AbortError` propagates unchanged; check `signal.aborted` to tell cancel from failure. Text already passed to `onDelta` stays with the caller, which is how WP-08 saves partial answers as `incomplete`.
+- **Error codes** (all `AppError`): `PROVIDER_HTTP_<status>` (502; retryable for 429/5xx, and the provider's own short message is included), `PROVIDER_UNREACHABLE` (502, retryable), `PROVIDER_TIMEOUT` (504, retryable), `PROVIDER_ERROR` (502, retryable: a mid-stream error or a 200 without choices), `PROVIDER_BAD_RESPONSE` (502, retryable), and for `structured` only `OUTPUT_TRUNCATED`, `CONTENT_FILTERED`, `MODEL_REFUSED`, `MODEL_MISMATCH`, `INVALID_JSON` (502, not retryable). "Retryable" means a user may retry; nothing retries automatically.
+- `MODEL_MISMATCH` is enforced only in `structured` (the KG). Chat results report the answering model.
+- The embeddings API reports the model **without** the provider prefix (`text-embedding-3-small`). Store and compare the **configured** `OPENROUTER_EMBEDDING_MODEL` in `chunks.embedding_model`, not the returned name.
+- At low effort on a trivial prompt, Astra used 0 reasoning tokens; the KG prompt will show real numbers.
+- The adapter is not yet wired into `createApp`. WP-08 adds `openrouter: OpenRouter | null` to `AppDeps` (null without a key → `503 AI_NOT_CONFIGURED`).
 
 ---
 
