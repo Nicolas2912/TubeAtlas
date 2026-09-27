@@ -82,3 +82,16 @@ test('JSON bodies over 1 MB are refused', async (t) => {
   assert.equal(res.status, 413);
   assert.equal((await res.json()).error.code, 'PAYLOAD_TOO_LARGE');
 });
+
+test('settings show models, data directory, and key presence without key values', async (t) => {
+  const { request, config, cleanup } = createTestApp({ env: { OPENROUTER_API_KEY: 'sk-or-secret' } });
+  t.after(cleanup);
+  const text = await (await request('/api/settings')).text();
+  assert.deepEqual(JSON.parse(text), {
+    aiConfigured: true,
+    youtubeKey: false,
+    models: { chat: 'openai/gpt-4.1-mini', embedding: 'openai/text-embedding-3-small', kg: 'openai/gpt-6-astra', kgReasoningEffort: 'low' },
+    dataDir: config.dataDir,
+  });
+  assert.ok(!text.includes('secret'));
+});

@@ -61,6 +61,14 @@ export function createApp(deps: AppDeps) {
     .get('/health', (c) =>
       c.json({ ok: true, aiConfigured: config.openrouterApiKey !== undefined, youtubeKey: config.youtubeApiKey !== undefined }),
     )
+    .get('/settings', (c) =>
+      c.json({
+        aiConfigured: config.openrouterApiKey !== undefined,
+        youtubeKey: config.youtubeApiKey !== undefined,
+        models: { chat: config.chatModel, embedding: config.embeddingModel, kg: config.kgModel, kgReasoningEffort: config.kgReasoningEffort },
+        dataDir: config.dataDir,
+      }),
+    )
     .route('/videos', videoRoutes(deps))
     .route('/videos', transcriptRoutes(deps))
     .route('/topics', topicRoutes(deps))
