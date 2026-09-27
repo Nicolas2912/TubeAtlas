@@ -3,12 +3,19 @@ import { fileURLToPath } from 'node:url';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { MAX_MANUAL_TRANSCRIPT_BYTES } from '../../shared/api.ts';
 import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import { errorBody, handleError } from './errors.ts';
+import type { YouTube } from './integrations/youtube.ts';
+import type { JobRunner } from './jobs.ts';
+import { jobRoutes } from './routes/jobs.ts';
+import { topicRoutes } from './routes/topics.ts';
+import { transcriptRoutes } from './routes/transcripts.ts';
+import { videoRoutes } from './routes/videos.ts';
 import { DEV_WEB_PORT } from '../../shared/ports.ts';
 
-export type AppDeps = { db: Db; config: Config };
+export type AppDeps = { db: Db; config: Config; youtube: YouTube; jobs: JobRunner };
 
 const frontendDist = fileURLToPath(new URL('../../frontend/dist', import.meta.url));
 
@@ -31,17 +38,33 @@ function localOnly(port: number): MiddlewareHandler {
   };
 }
 
-export function createApp({ config }: AppDeps) {
+const MB = 1024 * 1024;
+const limit = (maxSize: number) =>
+  bodyLimit({ maxSize, onError: (c) => c.json(errorBody('PAYLOAD_TOO_LARGE', `Request body is larger than ${maxSize / MB} MB.`), 413) });
+
+/** 1 MB for API requests, except the few routes that accept large bodies. */
+function bodyLimits(): MiddlewareHandler {
+  const standard = limit(MB);
+  const large: [method: string, path: RegExp, handler: MiddlewareHandler][] = [
+    ['POST', /^\/api\/videos\/\d+\/transcript$/, limit(MAX_MANUAL_TRANSCRIPT_BYTES)],
+  ];
+  return (c, next) => {
+    const match = large.find(([method, path]) => c.req.method === method && path.test(c.req.path));
+    return (match ? match[2] : standard)(c, next);
+  };
+}
+
+export function createApp(deps: AppDeps) {
+  const { config } = deps;
   const api = new Hono()
-    .use(
-      bodyLimit({
-        maxSize: 1024 * 1024,
-        onError: (c) => c.json(errorBody('PAYLOAD_TOO_LARGE', 'Request body is larger than 1 MB.'), 413),
-      }),
-    )
+    .use(bodyLimits())
     .get('/health', (c) =>
       c.json({ ok: true, aiConfigured: config.openrouterApiKey !== undefined, youtubeKey: config.youtubeApiKey !== undefined }),
-    );
+    )
+    .route('/videos', videoRoutes(deps))
+    .route('/videos', transcriptRoutes(deps))
+    .route('/topics', topicRoutes(deps))
+    .route('/jobs', jobRoutes(deps));
   api.onError(handleError);
 
   const app = new Hono();

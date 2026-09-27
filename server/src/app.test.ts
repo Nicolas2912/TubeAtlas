@@ -8,7 +8,7 @@ test('health reports which integrations are configured, never key values', async
   t.after(bare.cleanup);
   assert.deepEqual(await (await bare.request('/api/health')).json(), { ok: true, aiConfigured: false, youtubeKey: false });
 
-  const keyed = createTestApp({ OPENROUTER_API_KEY: 'sk-or-secret', GOOGLE_API_KEY: 'g-secret' });
+  const keyed = createTestApp({ env: { OPENROUTER_API_KEY: 'sk-or-secret', GOOGLE_API_KEY: 'g-secret' } });
   t.after(keyed.cleanup);
   const text = await (await keyed.request('/api/health')).text();
   assert.deepEqual(JSON.parse(text), { ok: true, aiConfigured: true, youtubeKey: true });

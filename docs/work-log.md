@@ -92,3 +92,55 @@ One section per work package from [work-packages.md](work-packages.md): what was
 - `embed` returns `{ vectors, model, usage }` instead of bare vectors, because WP-07 must log embedding cost. `chat`/`chatStream` also return `latencyMs`. work-packages.md was updated.
 - The embeddings endpoint reports the model as `text-embedding-3-small` (no `openai/` prefix), so WP-07 must key stored vectors on the configured model name. Noted in WP-02's as-built notes.
 - Live spend for this WP: $0.002056.
+
+## WP-03: YouTube import, transcripts, job runner (2026-09-27)
+
+**Done**
+- `server/src/integrations/youtube.ts`: `parseYouTubeId`, `parseIsoDuration`, `toSegments`, `cleanText`, and `createYouTube({ apiKey?, fetch?, sleep? })`.
+  - Metadata comes from the Data API when a key is set, falling back to oEmbed on a key or quota error; oEmbed is used without a key.
+  - Captions go through `youtube-transcript@1.3.1` with a recording `fetch`. It adds a per-request timeout and the job's abort signal, detects srv3 (ms) vs classic (s) from the caption XML, and notices 429s.
+  - Outcomes: `ready`, `no_captions`, `blocked`, `failed`. Network errors are retried twice (1 s, 3 s).
+- `server/src/jobs.ts`: persisted sequential runner (`enqueue` with duplicate protection, `cancel`, `retry`, `cancelForVideo`, `start`, `stop`, `idle`).
+- Services:
+  - `services/import.ts`: import flow and transcript job handler;
+  - `services/transcripts.ts`: revisions; text, VTT, and SRT parsing;
+  - `services/videos.ts`: list, get, update, delete, with active job and topics in summaries;
+  - `services/topics.ts`.
+- Routes: `routes/videos.ts`, `transcripts.ts`, `topics.ts`, `jobs.ts`; `server/src/validate.ts`; request schemas in `shared/api.ts`.
+- Per-route body limits: 1 MB default, 5 MB for manual transcripts.
+- `scripts/fetch-transcript.ts` (refuses to overwrite a snapshot).
+
+**Verification**
+- `npm run check` passes; `npm test` 63/63 pass (32 new):
+  - URL parsing: 13 accepted forms and 9 rejects, including a look-alike host;
+  - ISO durations;
+  - srv3 ms and classic s conversion through the full adapter with invented XML;
+  - an unknown caption format fails loudly;
+  - 429 and captcha → `blocked`; no tracks → `no_captions`; unavailable → `failed`;
+  - network retries (1 s, 3 s, then `failed`), recovery on the second attempt, and a caller abort is not retried;
+  - metadata: Data API, not found, oEmbed fallback, 404/401/offline;
+  - API: import → job → timed segments reload identically; re-import returns 200 without new calls; validation, `UNKNOWN_TOPIC`, `VIDEO_NOT_FOUND`; topics on import;
+  - `no_captions`/`blocked` give a succeeded job and the right status;
+  - a failed job → retry → success, and retrying a succeeded job → 409;
+  - duplicate enqueue returns the active job; cancelling queued and running jobs;
+  - manual text, VTT (header, NOTE, cue settings, inline tags, hour timestamps, empty cue), and SRT (BOM, CRLF, tags) create revisions 1–3 with only the newest current;
+  - a 1.3 MB manual transcript is accepted, while 5 MB+ and a 1 MB+ topic body are refused;
+  - list, topic filter, PATCH, and validation; topic CRUD with case-insensitive duplicates;
+  - deleting a video removes its files, cancels its job, and returns 404 afterwards.
+- Live (free), on a temporary `DATA_DIR`, with the real server, importing by URL (three different link forms):
+
+  | Video | Import | Metadata (Data API) | Transcript |
+  | --- | --- | --- | --- |
+  | Vzaccv7-qNw | 201 | "Paperclip ist NEXT LEVEL!!", Niklas Steenfatt, 590 s | ready, de, 316 segments, last end 591.24 s |
+  | jGD_UR4wMJc | 201 | "8 Jev Use Cases That Feel Like Cheating", Matthew Berman, 638 s | ready, en, 261 segments, last end 639.6 s |
+  | KIY0np5KDfE | 201 | "Joe Rogan Experience #2553 - Andrew Huberman", PowerfulJRE, 9,599 s | ready, en, 4,841 segments, last end 9,592.64 s |
+
+  Every stored transcript is **identical to its evaluation snapshot**, segment by segment (id, start, duration within 1 µs, and text). Re-importing returned 200. The server stopped cleanly with SIGINT (exit 0).
+- oEmbed path without a key (live): title, channel, and thumbnail returned, duration `null`; an unknown id → `404 VIDEO_NOT_FOUND`.
+- `node scripts/fetch-transcript.ts jGD_UR4wMJc` refuses to overwrite the existing snapshot (exit 1).
+
+**Deviations and notes**
+- Bug found by a test and fixed: an unreadable caption format made the package return `[]`, which was first reported as `no_captions`. The format is now checked first, so a YouTube format change fails loudly.
+- Body limits are now per route (`bodyLimits()` in `app.ts`) instead of a single 1 MB limit on the whole API sub-app. WP-01's as-built note was corrected.
+- Added, not in the original spec (all recorded in work-packages.md): oEmbed fallback when the Data API rejects the key or quota; `422 VIDEO_RESTRICTED`; `language` on manual transcripts; `activeJob` in video summaries; topic linking on re-import; `409 JOB_NOT_RETRYABLE`; runner `stop()` for tests and shutdown (waits at most 3 s); a pasted transcript isn't downgraded by a later failed fetch.
+- The job runner's first loop tick is scheduled with `setImmediate`. Tests must stop the runner before closing the database; `createTestApp().cleanup` does this.

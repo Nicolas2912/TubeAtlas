@@ -52,9 +52,10 @@ server/
     errors.ts          # AppError + JSON error handler
     testing.ts         # createTestApp() for server tests (temp DATA_DIR)
     jobs.ts            # persisted sequential runner
+    validate.ts        # zValidator with the app's error format
     integrations/youtube.ts, openrouter.ts
-    routes/videos.ts, transcripts.ts, topics.ts, documents.ts, assets.ts, chat.ts, graph.ts, jobs.ts, search.ts, health.ts
-    services/import.ts, transcripts.ts, units.ts, retrieval.ts, documents.ts, assets.ts, chat.ts
+    routes/videos.ts, transcripts.ts, topics.ts, jobs.ts, documents.ts, assets.ts, chat.ts, graph.ts, search.ts
+    services/import.ts, videos.ts, topics.ts, transcripts.ts, units.ts, retrieval.ts, documents.ts, assets.ts, chat.ts
     services/graph/preprocess.ts, prompt.ts, extract.ts, validate.ts, verify.ts, assemble.ts, pipeline.ts
 shared/                # Zod contracts + pure functions used by both sides (no Node or DOM APIs)
   api.ts, graph.ts, time.ts, ports.ts
@@ -142,7 +143,7 @@ Overview (→ = depends on):
 | 00 | Cutover and Node skeleton | none | 0 | **Done** 2026-09-27, `3d0669f` ([log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27)) |
 | 01 | Database, config, server shell | 00 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-01-database-config-server-shell-2026-09-27)) |
 | 02 | OpenRouter adapter and provider check | 01 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27)) |
-| 03 | YouTube import, transcripts, job runner | 01 | 0–1 | Not started |
+| 03 | YouTube import, transcripts, job runner | 01 | 0–1 | **Done** 2026-09-27 ([log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27)) |
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
 | 05 | Watch & Read | 04 | 1 | Not started |
 | 06 | Documents and attachments | 05 | 2 | Not started |
@@ -391,7 +392,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 **As built** (what later WPs need to know):
 - `createApp({ db, config })` returns `{ app, api }`; `AppType` is the type of `api`. Add feature routes by **chaining** on `api` in `createApp` (the chain is what gives the typed client its types), or mount route modules with `api.route(...)`. Later WPs extend `AppDeps` with `youtube`, `openrouter`, etc.
 - Unknown `/api` paths: the root app's `notFound` returns the JSON `404 NOT_FOUND`; the static and SPA handlers call `next()` for `/api` paths, so routes can't be shadowed by the frontend fallback.
-- The 1 MB `bodyLimit` is applied to the whole `api` sub-app. WP-06's upload route needs its own 25 MB limit: mount uploads on a separate sub-app (or exempt its path) so the 1 MB limit doesn't run first.
+- ~~The 1 MB `bodyLimit` is applied to the whole `api` sub-app.~~ Changed in WP-03: `bodyLimits()` in `app.ts` applies 1 MB by default and a per-route limit from its `large` list (manual transcripts: 5 MB). WP-06 adds its upload route (25 MB) to that list.
 - `server/src/testing.ts` provides `createTestApp(env?)`: a real app on a fresh temp `DATA_DIR`, with `request(path, init)` sending loopback-host requests, and `cleanup()`. Tests add ad-hoc routes to `app` after creation when they need one.
 - `AppError(status, code, message, retryable)` and `errorBody()` live in `server/src/errors.ts`.
 - Dev web port is **5171** (`shared/ports.ts`), not Vite's default 5173, which another local project on this machine already uses.
@@ -466,6 +467,8 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 ### WP-03: YouTube import, transcripts, job runner
 
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27).
+
 **Goal:** a pasted YouTube URL becomes a persisted video with a timed transcript through a durable job. Manual transcript fallback works.
 
 **Scope.**
@@ -477,12 +480,12 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **Metadata:**
   - With a key: `GET https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=…&key=…`. Take title, `channelTitle`, the best thumbnail, and duration (ISO 8601 → seconds).
   - Without a key: `GET https://www.youtube.com/oembed?url=…&format=json` (title, `author_name`, `thumbnail_url`; duration `null`).
-  - No result becomes `404 VIDEO_NOT_FOUND`; a network failure becomes `502 YOUTUBE_UNREACHABLE` (retryable).
+  - No result becomes `404 VIDEO_NOT_FOUND`; a network failure becomes `502 YOUTUBE_UNREACHABLE` (retryable). If the Data API rejects the key or quota (non-200), fall back to oEmbed. oEmbed 401/403 (private or embedding disabled) becomes `422 VIDEO_RESTRICTED`.
   - Ignore YouTube's `caption` flag (it was wrong for the test videos).
 - **Transcript adapter:** call `YoutubeTranscript.fetchTranscript(id, { fetch: recordingFetch })`. `recordingFetch` wraps `fetch`, and for responses whose URL contains `/api/timedtext` it clones the response and records the format:
   - `<p t="` means **srv3, milliseconds**;
   - `<text start="` means **classic, seconds**;
-  - anything else is an `UNKNOWN_CAPTION_FORMAT` failure.
+  - anything else is an `UNKNOWN_CAPTION_FORMAT` failure. Check this **before** treating an empty result as `no_captions`: the package also returns `[]` for a format it can't read.
 
   Convert to `{ id, start, end, text }` in seconds, with `id` counting from 0 and `end = start + duration`. Decode leftover HTML entities. Keep empty-text segments out. Map errors:
   - `…DisabledError` / `…NotAvailableError` → `no_captions`;
@@ -490,7 +493,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `…VideoUnavailableError` → `failed` with message "Video unavailable";
   - network errors → retried up to 2 times with 1 s and 3 s delays (free and safe), then `failed`.
 - **Import flow**, `POST /api/videos/import { url, topicId? }`:
-  1. Parse the ID. If the video exists, return `200 { video, job: activeJobOrNull }`.
+  1. Parse the ID. If the video exists, return `200 { video, job: activeJobOrNull }` (and link the given topic to it, if any).
   2. Otherwise fetch metadata inside the request, insert the video (`transcript_status='pending'`), add the topic link if given, and enqueue a `transcript` job.
   3. Return `201 { video, job }`.
 - **Job runner (`jobs.ts`):**
@@ -498,18 +501,19 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `start()` processes jobs one at a time in `id` order: pick the oldest `queued`, set `running` and `started_at`, and call `handlers[kind](job, ctx)`. `ctx` provides `setStage(text)`, a `signal` (an `AbortController` stored in a `Map` so cancel can abort it), and `db`.
   - Handlers write their outputs in one transaction, and then the runner marks `succeeded` with `result_json`. On throw it marks `failed` with `error_code`/`error_message` taken from the `AppError`, or `JOB_FAILED` for unknown errors (details logged).
   - `cancel(id)`: a queued job becomes `cancelled`; a running job gets aborted and becomes `cancelled` when the handler exits.
-  - `retry(id)` creates a new job with the same kind and input (only if it was `failed`, `cancelled`, or `interrupted`).
+  - `retry(id)` creates a new job with the same kind and input (only if it was `failed`, `cancelled`, or `interrupted`; otherwise `409 JOB_NOT_RETRYABLE`).
+  - `stop()` stops taking new jobs and resolves when the current one finishes (tests; shutdown waits at most 3 s).
   - After an enqueue the loop wakes with `setImmediate`; it doesn't poll.
 - **Transcript job handler:**
   - stage `fetching captions` → adapter;
   - on success, insert a transcript (`revision = max + 1`, flip the previous `is_current` to 0 in the same transaction, `sha256` of `segments_json`, `plain_text` = texts joined by spaces) and set `transcript_status='ready'`;
-  - on a mapped failure, set the status and `transcript_error`, and the job **succeeds** with `result { status }`. A missing caption is an outcome, not a crash. Only unexpected errors fail the job.
-- **Manual transcript**, `POST /api/videos/:id/transcript { format: 'text'|'vtt'|'srt', content }`:
+  - on a mapped failure, set the status and `transcript_error`, and the job **succeeds** with `result { status }`. A missing caption is an outcome, not a crash. Only unexpected errors fail the job. If the video already has a transcript (e.g. pasted), a later failed fetch leaves its status `ready`.
+- **Manual transcript**, `POST /api/videos/:id/transcript { format: 'text'|'vtt'|'srt', content, language? }`:
   - `text` becomes one segment per non-empty paragraph with null times (`timed=0`, `source='paste_text'`).
   - `vtt`/`srt` are parsed with a small parser: cue times `hh:mm:ss.mmm` or `hh:mm:ss,mmm`, strip tags and cue settings, and skip empty cues (`timed=1`, `source='upload_timed'`).
   - Either way it creates a new current revision and sets `transcript_status='ready'`. Content is limited to 5 MB.
 - **Routes:**
-  - `GET /api/videos?topicId=` returns summaries with `topics[]`.
+  - `GET /api/videos?topicId=` returns summaries with `topics[]` and `activeJob` (`{ id, kind, status, stage }` or null).
   - `GET/PATCH/DELETE /api/videos/:id`. PATCH accepts `{ playbackSeconds?, topicIds? }`. DELETE removes rows via cascade, then deletes the video's asset files.
   - `GET /api/videos/:id/transcript` returns `{ transcriptId, revision, language, source, timed, segments }` or `404 NO_TRANSCRIPT`. Units are added in WP-07.
   - Topics: `GET/POST /api/topics`, `PATCH/DELETE /api/topics/:id`. Duplicate names return `409 TOPIC_EXISTS`.
@@ -517,7 +521,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **`scripts/fetch-transcript.ts <videoId>`:** writes `data/evaluation/<id>.transcript.json` in the existing snapshot format (`{ videoId, language, source, segments:[{id,start,duration,text}] }`) and prints its SHA-256. Used only if a snapshot is missing.
 
 **Acceptance criteria.**
-- [ ] Tests (fake YouTube adapter) cover:
+- [x] Tests (fake YouTube adapter) cover:
   - URL parsing for all accepted forms plus rejects;
   - import creates the video and a job, and a second import returns the existing video;
   - the job stores timed segments and reloading returns them identically;
@@ -527,7 +531,16 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - a duplicate enqueue returns the same job;
   - cancel and retry work;
   - deleting a video removes asset files.
-- [ ] Live check (manual, free), recorded in the work log. Run the server and import all three evaluation videos by URL. Resulting segment counts: `Vzaccv7-qNw` 316 (de), `jGD_UR4wMJc` 261 (en), `KIY0np5KDfE` 4,841 (en). If YouTube returns different captions today, record the new counts and hashes.
+- [x] Live check (manual, free), recorded in the work log. Run the server and import all three evaluation videos by URL. Resulting segment counts: `Vzaccv7-qNw` 316 (de), `jGD_UR4wMJc` 261 (en), `KIY0np5KDfE` 4,841 (en). If YouTube returns different captions today, record the new counts and hashes. (2026-09-27: all three identical to the snapshots, segment by segment.)
+
+**As built** (what later WPs need to know):
+- `AppDeps` is `{ db, config, youtube, jobs }`. `main.ts` builds `createYouTube({ apiKey })` and `createJobRunner(db, { transcript: transcriptJobHandler(youtube) })`, then calls `jobs.start()`. WP-10 adds the `graph` handler there.
+- Routes live in `server/src/routes/*.ts` as functions `xxxRoutes(deps)` returning a chained `Hono` app, mounted in `createApp` with `.route('/videos', …)`. Use `validate(target, schema)` from `server/src/validate.ts` (failures → `400 VALIDATION_FAILED`, bad path ids → `404 NOT_FOUND`). Request schemas live in `shared/api.ts`.
+- Response shapes: `VideoSummary` (`services/videos.ts`); `Transcript` `{ transcriptId, revision, language, source, timed, segments }`; `Job` `{ id, kind, videoId, status, stage, input, result, error: {code,message}|null, createdAt, startedAt, finishedAt }`. Import returns `{ video, job }` (201 new, 200 existing); retry returns the new job (201); deletes return 204.
+- Job runner API: `enqueue`, `cancel`, `retry`, `cancelForVideo`, `get`, `activeFor(kind, videoId)`, `start`, `stop`, `idle`. A handler receives `{ db, signal, setStage }`, writes its output in one transaction, returns a small result, and should call `signal.throwIfAborted()` before writing. If the handler resolves, the job is `succeeded`; if it throws after an abort, it's `cancelled`.
+- `createTestApp({ env?, youtube? })` returns `{ app, db, config, dataDir, jobs, request, json, cleanup }`, with the runner started. `cleanup` is async (`t.after(cleanup)`). The default `youtube` fails loudly if called.
+- Transcript segments: `{ id, start, end, text }` in seconds (rounded to ms). Rolling YouTube captions overlap in time; that's kept as is.
+- `scripts/fetch-transcript.ts` never overwrites an existing snapshot.
 
 ---
 
