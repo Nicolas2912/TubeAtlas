@@ -10,13 +10,14 @@ Status: execution plan, written September 26, 2026. It breaks the [implementatio
 
 1. **One WP at a time, in order.** Start a WP only when every WP it depends on is done. Don't start features from later WPs early, even "quickly".
 2. **Done means verified.** A WP is done when every acceptance criterion is checked and `npm run check && npm test` passes. Record the evidence (commands run, results, what you clicked) in `docs/work-log.md`, one section per WP. If a criterion can't be met, say so there and stop; never tick it anyway.
-3. **One commit per WP**, message `WP-NN: <title>`, containing code, tests, and the work-log entry.
-4. **No new dependencies** beyond §3.2. If one seems necessary, write the reason in the work log before adding it. Prefer 30 lines of your own code over a package, as long as the result stays simple.
-5. **No speculative structure.** No generic repositories, service containers, plugin registries, event buses, state managers, or "utils" grab-bags. Create a file when code needs it.
-6. **No fake success.** No placeholder screens in the active path, no hardcoded sample data, and no endpoints that report success without doing the work. A feature that isn't built yet isn't shown.
-7. **Paid calls are opt-in.** `npm test` never touches the network. Live checks run only through the explicit scripts named below. Record the cost of every live run, which OpenRouter reports in `usage.cost`.
-8. **Evaluation data is protected.** Nothing from the three evaluation transcripts (sentences, names, aliases, or paraphrases) may appear in prompts, code, dictionaries, or unit-test fixtures. Tests use invented text.
-9. **Ask before exceeding limits.** Stop and ask the user if a live-spend cap would be exceeded or if a decision belongs to them (model, reasoning effort, dropping a requirement).
+3. **Keep this document current.** When a WP is done, in the same commit: set its status in the overview table (§5), tick its acceptance criteria, and correct any instruction or criterion that turned out wrong or contradictory. Add a short *As built* note under the WP for anything the next WP must know. The work log holds the detailed evidence; this document must always show the real status and correct instructions.
+4. **One commit per WP**, message `WP-NN: <title>`, containing code, tests, the work-log entry, and the updates to this document.
+5. **No new dependencies** beyond §3.2. If one seems necessary, write the reason in the work log before adding it. Prefer 30 lines of your own code over a package, as long as the result stays simple.
+6. **No speculative structure.** No generic repositories, service containers, plugin registries, event buses, state managers, or "utils" grab-bags. Create a file when code needs it.
+7. **No fake success.** No placeholder screens in the active path, no hardcoded sample data, and no endpoints that report success without doing the work. A feature that isn't built yet isn't shown.
+8. **Paid calls are opt-in.** `npm test` never touches the network. Live checks run only through the explicit scripts named below. Record the cost of every live run, which OpenRouter reports in `usage.cost`.
+9. **Evaluation data is protected.** Nothing from the three evaluation transcripts (sentences, names, aliases, or paraphrases) may appear in prompts, code, dictionaries, or unit-test fixtures. Tests use invented text.
+10. **Ask before exceeding limits.** Stop and ask the user if a live-spend cap would be exceeded or if a decision belongs to them (model, reasoning effort, dropping a requirement).
 
 ## 2. Refinements to the plan (already applied to the plan and spec)
 
@@ -75,7 +76,7 @@ Runtime:
 
 Dev: `typescript@^7.0`, `vite@^8.3`, `@vitejs/plugin-react@^6.1`, `@types/node@^26`, `@types/better-sqlite3`, `@types/react@^19.3`, `@types/react-dom@^19.3`.
 
-There's no linter or formatter beyond strict TypeScript. npm on Node 26 warns about unapproved install scripts: approve only what the build needs (better-sqlite3's native binary if prompted) and record it in the README.
+There's no linter or formatter beyond strict TypeScript. npm 11 on Node 26 asks for approval of package install scripts (`allowScripts` in `package.json`). `better-sqlite3@13` ships prebuilt binaries for linux/darwin/win32 on x64 and arm64, so its `node-gyp rebuild` script is **denied** (`"allowScripts": { "better-sqlite3": false }`) and no compiler is needed. Deny or approve any future script explicitly, and record why in the README.
 
 ### 3.3 Scripts
 
@@ -135,27 +136,29 @@ There's no linter or formatter beyond strict TypeScript. npm on Node 26 warns ab
 
 Overview (→ = depends on):
 
-| WP | Title | Depends on | Plan milestone |
-| --- | --- | --- | --- |
-| 00 | Cutover and Node skeleton | none | 0 |
-| 01 | Database, config, server shell | 00 | 0 |
-| 02 | OpenRouter adapter and provider check | 01 | 0 |
-| 03 | YouTube import, transcripts, job runner | 01 | 0–1 |
-| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 |
-| 05 | Watch & Read | 04 | 1 |
-| 06 | Documents and attachments | 05 | 2 |
-| 07 | Evidence units and retrieval | 02, 03 | 3 |
-| 08 | Chat | 06, 07 | 3 |
-| 09 | KG evaluation references (no model runs) | 07 | 4 |
-| 10 | KG pipeline | 02, 07, 09 | 4 |
-| 11 | Knowledge Graph view | 05, 10 | 4 |
-| 12 | KG evaluation, tuning, report, user spot-check | 11 | 4 |
-| 13 | Search, All documents, polish, release | 12 | 5 |
-| 14 | Visual Studio (optional, only on request) | 13 | 6 |
+| WP | Title | Depends on | Plan milestone | Status |
+| --- | --- | --- | --- | --- |
+| 00 | Cutover and Node skeleton | none | 0 | **Done** 2026-09-27, `3d0669f` ([log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27)) |
+| 01 | Database, config, server shell | 00 | 0 | Not started |
+| 02 | OpenRouter adapter and provider check | 01 | 0 | Not started |
+| 03 | YouTube import, transcripts, job runner | 01 | 0–1 | Not started |
+| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
+| 05 | Watch & Read | 04 | 1 | Not started |
+| 06 | Documents and attachments | 05 | 2 | Not started |
+| 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
+| 08 | Chat | 06, 07 | 3 | Not started |
+| 09 | KG evaluation references (no model runs) | 07 | 4 | Not started |
+| 10 | KG pipeline | 02, 07, 09 | 4 | Not started |
+| 11 | Knowledge Graph view | 05, 10 | 4 | Not started |
+| 12 | KG evaluation, tuning, report, user spot-check | 11 | 4 | Not started |
+| 13 | Search, All documents, polish, release | 12 | 5 | Not started |
+| 14 | Visual Studio (optional, only on request) | 13 | 6 | Not started |
 
 ---
 
 ### WP-00: Cutover and Node skeleton
+
+**Status:** done on 2026-09-27 (`3d0669f`); evidence in the [work log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27).
 
 **Goal:** the repository is a clean Node 26 TypeScript project with the Python stack gone, and `npm ci && npm run check && npm test` pass on a fresh clone.
 
@@ -186,11 +189,17 @@ Overview (→ = depends on):
 8. Tell the user their local Node is 26.8.1 and `engines` requires ≥ 26.10. The agent can upgrade it if it has permission; otherwise it asks the user.
 
 **Acceptance criteria.**
-- [ ] `git ls-files` contains no `.py`, Poetry, Docker, or Python CI files. `legacy/` is unchanged.
-- [ ] A fresh clone passes `npm ci && npm run check && npm test`.
-- [ ] `npm run dev` serves the frontend at `http://127.0.0.1:5173`, and `/api/health` answers `{ ok: true }` through the proxy.
-- [ ] `npm run build && npm start` serves the built page and `/api/health` from `http://127.0.0.1:5170`. (Static serving uses `serveStatic` from `@hono/node-server/serve-static`, with an SPA fallback to `index.html` for non-`/api` GET requests only.)
-- [ ] `output/ui-concepts/` is committed.
+- [x] Outside `legacy/`, `git ls-files` contains no `.py`, Poetry, Docker, or Python CI files. `legacy/` is unchanged (it still contains its own Python files, which is expected).
+- [x] A fresh clone passes `npm ci && npm run check && npm test`.
+- [x] `npm run dev` serves the frontend at `http://127.0.0.1:5173`, and `/api/health` answers `{ ok: true }` through the proxy.
+- [x] `npm run build && npm start` serves the built page and `/api/health` from `http://127.0.0.1:5170`. (Static serving uses `serveStatic` from `@hono/node-server/serve-static`, with an SPA fallback to `index.html` for non-`/api` GET requests only.) Unknown `/api/...` paths return a JSON `404 NOT_FOUND`, never the page.
+- [x] `output/ui-concepts/` is committed (it already was, in `eeb0f10`).
+
+**As built** (what later WPs need to know):
+- `server/src/app.ts` exports `createApp()` returning `{ app, api }`, and `AppType` is the type of `api`. Feature routes are added to `api` (mounted at `/api`). WP-01 changes the signature to `createApp(deps)` as specified.
+- Hono gotcha: a mounted sub-app's `notFound` handler is ignored, so the JSON 404 is an explicit `app.all('/api/*')` registered after the API routes and before the static routes. Keep that order when adding routes.
+- `server/src/main.ts` reads `PORT` directly; WP-01 replaces this with `config.ts`.
+- Local Node is 26.10.0, managed by mise with global setting `node = "26"`.
 
 ---
 
@@ -505,7 +514,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 **Scope.**
 - In: the router, `Shell`, `VideoLayout` (header, breadcrumb, four tabs), Library, Import dialog, Topics, Settings, `api.ts` hooks, `styles.css`, and `Markdown.tsx` (shared renderer).
-- Out: the content of the tabs. A tab appears only once its WP is done (rule 6).
+- Out: the content of the tabs. A tab appears only once its WP is done (rule 7).
 
 **Implementation details.**
 - **Routes** (`createBrowserRouter`):
@@ -933,7 +942,7 @@ Rules:
   6. The spot-check.
   7. The UI check.
 
-  Every prompt, schema, or processing change bumps its version and gets a CHANGELOG line (what, why, which failure it fixes). Evaluation-video content never goes into prompts or code (rule 8).
+  Every prompt, schema, or processing change bumps its version and gets a CHANGELOG line (what, why, which failure it fixes). Evaluation-video content never goes into prompts or code (rule 9).
 - Write the report at `evaluation/kg/reports/<date>-p<prompt>-s<schema>-r<processing>.md` with all §9.7 contents and verdict **PASS (pending user spot-check)**, **FAIL**, or **NOT EVALUATED**.
 - **Stop and ask the user** to fill in the spot-check. On their answer, follow spec §9.8. For a PASS, update the verdict to **PASS (user confirmed)**.
 
