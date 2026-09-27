@@ -50,13 +50,14 @@ server/
     config.ts          # Zod-validated env
     db.ts              # open(), migrate(), tx helper
     errors.ts          # AppError + JSON error handler
+    testing.ts         # createTestApp() for server tests (temp DATA_DIR)
     jobs.ts            # persisted sequential runner
     integrations/youtube.ts, openrouter.ts
     routes/videos.ts, transcripts.ts, topics.ts, documents.ts, assets.ts, chat.ts, graph.ts, jobs.ts, search.ts, health.ts
     services/import.ts, transcripts.ts, units.ts, retrieval.ts, documents.ts, assets.ts, chat.ts
     services/graph/preprocess.ts, prompt.ts, extract.ts, validate.ts, verify.ts, assemble.ts, pipeline.ts
 shared/                # Zod contracts + pure functions used by both sides (no Node or DOM APIs)
-  api.ts, graph.ts, time.ts
+  api.ts, graph.ts, time.ts, ports.ts
 frontend/
   index.html  vite.config.ts  tsconfig.json
   src/main.tsx  api.ts  styles.css
@@ -87,7 +88,7 @@ There's no linter or formatter beyond strict TypeScript. npm 11 on Node 26 asks 
   "scripts": {
     "dev": "node scripts/dev.ts",                          // spawns dev:api + dev:web, kills both on exit
     "dev:api": "node --watch --env-file-if-exists=.env server/src/main.ts",
-    "dev:web": "vite --config frontend/vite.config.ts",   // port 5173, proxies /api → 127.0.0.1:5170
+    "dev:web": "vite --config frontend/vite.config.ts",   // port 5171 (shared/ports.ts), proxies /api → 127.0.0.1:5170
     "build": "vite build --config frontend/vite.config.ts",  // → frontend/dist
     "start": "node --env-file-if-exists=.env server/src/main.ts",  // serves API + frontend/dist on 127.0.0.1:5170
     "db:migrate": "node --env-file-if-exists=.env server/src/db.ts --migrate",
@@ -139,7 +140,7 @@ Overview (→ = depends on):
 | WP | Title | Depends on | Plan milestone | Status |
 | --- | --- | --- | --- | --- |
 | 00 | Cutover and Node skeleton | none | 0 | **Done** 2026-09-27, `3d0669f` ([log](work-log.md#wp-00-cutover-and-node-skeleton-2026-09-27)) |
-| 01 | Database, config, server shell | 00 | 0 | Not started |
+| 01 | Database, config, server shell | 00 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-01-database-config-server-shell-2026-09-27)) |
 | 02 | OpenRouter adapter and provider check | 01 | 0 | Not started |
 | 03 | YouTube import, transcripts, job runner | 01 | 0–1 | Not started |
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
@@ -191,19 +192,21 @@ Overview (→ = depends on):
 **Acceptance criteria.**
 - [x] Outside `legacy/`, `git ls-files` contains no `.py`, Poetry, Docker, or Python CI files. `legacy/` is unchanged (it still contains its own Python files, which is expected).
 - [x] A fresh clone passes `npm ci && npm run check && npm test`.
-- [x] `npm run dev` serves the frontend at `http://127.0.0.1:5173`, and `/api/health` answers `{ ok: true }` through the proxy.
+- [x] `npm run dev` serves the frontend at `http://127.0.0.1:5171` (5173 until WP-01, see its as-built notes), and `/api/health` answers `{ ok: true }` through the proxy.
 - [x] `npm run build && npm start` serves the built page and `/api/health` from `http://127.0.0.1:5170`. (Static serving uses `serveStatic` from `@hono/node-server/serve-static`, with an SPA fallback to `index.html` for non-`/api` GET requests only.) Unknown `/api/...` paths return a JSON `404 NOT_FOUND`, never the page.
 - [x] `output/ui-concepts/` is committed (it already was, in `eeb0f10`).
 
 **As built** (what later WPs need to know):
 - `server/src/app.ts` exports `createApp()` returning `{ app, api }`, and `AppType` is the type of `api`. Feature routes are added to `api` (mounted at `/api`). WP-01 changes the signature to `createApp(deps)` as specified.
-- Hono gotcha: a mounted sub-app's `notFound` handler is ignored, so the JSON 404 is an explicit `app.all('/api/*')` registered after the API routes and before the static routes. Keep that order when adding routes.
+- Hono gotcha: a mounted sub-app's `notFound` handler is ignored. (Superseded in WP-01: the root app's `notFound` now returns the JSON 404, and the frontend handlers skip `/api` paths.)
 - `server/src/main.ts` reads `PORT` directly; WP-01 replaces this with `config.ts`.
 - Local Node is 26.10.0, managed by mise with global setting `node = "26"`.
 
 ---
 
 ### WP-01: Database, config, server shell
+
+**Status:** done on 2026-09-27; evidence in the [work log](work-log.md#wp-01-database-config-server-shell-2026-09-27).
 
 **Goal:** a persistent SQLite database with the full first-release schema, plus a hardened server shell every later WP plugs into.
 
@@ -361,12 +364,12 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 ```
 
 4. `app.ts`, middleware in this order:
-   - **Host guard:** reject any request whose `Host` isn't `127.0.0.1:PORT`, `localhost:PORT`, or (in dev) `…:5173`, with `403 BAD_HOST`. This blocks DNS-rebinding attacks.
+   - **Host guard:** reject any request whose `Host` isn't `127.0.0.1` or `localhost` on `PORT` or on the dev web port `DEV_WEB_PORT` (5171, from `shared/ports.ts`), with `403 BAD_HOST`. This blocks DNS-rebinding attacks. The dev port is always allowed (not only in dev): only a loopback server on that port can send that Host, so it costs nothing.
    - **Origin guard for non-GET requests:** if an `Origin` header is present, it must be one of those hosts (`403 BAD_ORIGIN`).
    - `bodyLimit` of 1 MB on JSON routes (the upload route sets 25 MB).
    - No CORS middleware at all.
 5. `GET /api/health` returns `{ ok: true, aiConfigured, youtubeKey }`. There's no per-request database health check.
-6. **Startup recovery** in `main.ts`, before the job runner starts:
+6. **Startup recovery:** `recoverInterrupted(db)` in `db.ts`, called by `main.ts` right after migrating and before anything else runs (later: before the job runner starts):
 
    ```sql
    UPDATE jobs SET status='interrupted', finished_at=now WHERE status='running';
@@ -374,16 +377,25 @@ CREATE INDEX jobs_queue ON jobs(status, id);
    ```
 
 **Acceptance criteria.**
-- [ ] Tests cover:
+- [x] Tests cover:
   - a fresh DB migrates;
   - a second startup is a no-op;
   - an edited applied migration throws `MIGRATION_EDITED`;
   - foreign-key cascade: deleting a video removes its transcripts, documents, and jobs;
   - the partial unique indexes reject a second current transcript, a second active job, and a second generating message;
   - the documents `CHECK` constraints hold.
-- [ ] Tests: a request with `Host: evil.example` returns `403 BAD_HOST`; a POST with a foreign `Origin` returns `403`; an unknown thrown error is returned as `500 INTERNAL` without its message.
-- [ ] Recovery test: a `running` job and a `generating` message become `interrupted` when the app is created.
-- [ ] Deleting `data/` and starting again creates a working empty database.
+- [x] Tests: a request with `Host: evil.example` returns `403 BAD_HOST`; a POST with a foreign `Origin` returns `403`; an unknown thrown error is returned as `500 INTERNAL` without its message.
+- [x] Recovery test: a `running` job and a `generating` message become `interrupted` by the startup recovery (`recoverInterrupted`), also verified across a real server restart.
+- [x] Starting with an empty `DATA_DIR`, or after deleting only `data/tubeatlas.sqlite*`, creates a working, migrated database. (Never delete all of `data/`: the evaluation transcript snapshots live in `data/evaluation/`.)
+
+**As built** (what later WPs need to know):
+- `createApp({ db, config })` returns `{ app, api }`; `AppType` is the type of `api`. Add feature routes by **chaining** on `api` in `createApp` (the chain is what gives the typed client its types), or mount route modules with `api.route(...)`. Later WPs extend `AppDeps` with `youtube`, `openrouter`, etc.
+- Unknown `/api` paths: the root app's `notFound` returns the JSON `404 NOT_FOUND`; the static and SPA handlers call `next()` for `/api` paths, so routes can't be shadowed by the frontend fallback.
+- The 1 MB `bodyLimit` is applied to the whole `api` sub-app. WP-06's upload route needs its own 25 MB limit: mount uploads on a separate sub-app (or exempt its path) so the 1 MB limit doesn't run first.
+- `server/src/testing.ts` provides `createTestApp(env?)`: a real app on a fresh temp `DATA_DIR`, with `request(path, init)` sending loopback-host requests, and `cleanup()`. Tests add ad-hoc routes to `app` after creation when they need one.
+- `AppError(status, code, message, retryable)` and `errorBody()` live in `server/src/errors.ts`.
+- Dev web port is **5171** (`shared/ports.ts`), not Vite's default 5173, which another local project on this machine already uses.
+- Each migration runs in its own transaction; a process killed during startup leaves the database consistent (seen once: an empty file, migrated on the next start).
 
 ---
 

@@ -21,7 +21,7 @@ npm ci
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | API on 127.0.0.1:5170 (restarts on change) and the frontend on http://127.0.0.1:5173 |
+| `npm run dev` | API on 127.0.0.1:5170 (restarts on change) and the frontend on http://127.0.0.1:5171 |
 | `npm run build` | Builds the frontend into `frontend/dist` |
 | `npm start` | Serves the API and the built frontend on http://127.0.0.1:5170 |
 | `npm run check` | Typechecks server and frontend, then builds |
