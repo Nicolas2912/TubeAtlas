@@ -4,7 +4,7 @@ Status: execution plan, written September 26, 2026; progress reviewed October 3,
 
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
-- WP-00 through WP-07 are complete. WP-08 through WP-14 have not started. Next: WP-08 (Chat). See the overview in §5 and the work log for verification evidence.
+- WP-00 through WP-07 are complete. WP-08 is implemented and locally verified; real-model verification remains pending at the user’s request. WP-09 through WP-14 have not started. Next: finish WP-08’s real-model checks when OpenRouter is configured. See the overview in §5 and the work log for verification evidence.
 - The current release is desktop-only. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 
 ## 1. Rules for the implementing agent
@@ -149,7 +149,7 @@ Overview (→ = depends on):
 | 05 | Watch & Read | 04 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-05-watch--read-2026-10-03)) |
 | 06 | Documents and attachments | 05 | 2 | **Done** 2026-10-03 ([log](work-log.md#wp-06-documents-and-attachments-2026-10-03)) |
 | 07 | Evidence units and retrieval | 02, 03, 05 | 3 | **Done** 2026-10-03 ([log](work-log.md#wp-07-evidence-units-and-retrieval-2026-10-03)) |
-| 08 | Chat | 06, 07 | 3 | Not started |
+| 08 | Chat | 06, 07 | 3 | **Implemented; live verification pending** 2026-10-03 ([log](work-log.md#wp-08-chat-2026-10-03)) |
 | 09 | KG evaluation references (no model runs) | 07 | 4 | Not started |
 | 10 | KG pipeline | 02, 07, 09 | 4 | Not started |
 | 11 | Knowledge Graph view | 05, 10 | 4 | Not started |
@@ -462,7 +462,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `MODEL_MISMATCH` is enforced only in `structured` (the KG). Chat results report the answering model.
 - The embeddings API reports the model **without** the provider prefix (`text-embedding-3-small`). Store and compare the **configured** `OPENROUTER_EMBEDDING_MODEL` in `chunks.embedding_model`, not the returned name.
 - At low effort on a trivial prompt, Astra used 0 reasoning tokens; the KG prompt will show real numbers.
-- The adapter is not yet wired into `createApp`. WP-08 adds `openrouter: OpenRouter | null` to `AppDeps` (null without a key → `503 AI_NOT_CONFIGURED`).
+- WP-08 wires the adapter into a single app-owned chat service. `AppDeps.openrouter` is an optional injectable chat/embedding provider for controlled tests; normal startup uses the configured OpenRouter adapter. Without a key, sending returns `503 AI_NOT_CONFIGURED`.
 
 ---
 
@@ -646,7 +646,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `shared/watch.ts` provides paragraph grouping, Unicode search indexes/ranges, playback clamping, and transcript exports. WP-07 replaced raw-caption grouping and paragraph highlighting with evidence units: the 4,841-segment transcript now renders 1,472 units in 795 paragraphs without virtualization. Paragraphs retain `data-passage-index`; source times and selection identity are on unit spans (`data-unit-index`, `data-unit-id`, `data-start`).
 - `ManualTranscript.tsx` posts to the existing manual transcript endpoint. Plain text has no seeking or follow playback; VTT/SRT retain their times. Failed saves retain the draft. `shared/limits.ts` shares the size limit without pulling Zod into the reader bundle.
 - `POST /api/videos/:id/transcript/retry` returns a queued or active transcript job (201), `404 NOT_FOUND` for a missing video, or `409 TRANSCRIPT_READY` for an existing transcript. The shared video context resumes job polling after the retry. Manual saves and completed jobs refresh the reader.
-- WP-06 added the functional Save to note selection popover. Ask AI stays hidden until WP-08 connects its actual operation. Other video tabs stay hidden until their WPs are complete.
+- WP-06 added the functional Save to note selection popover. WP-08 adds the functional Ask AI selection action, creating a conversation and focusing an unsent question. Other video tabs stay hidden until their WPs are complete.
 
 ---
 
@@ -755,7 +755,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 **As built** (what later WPs need to know):
 - `shared/units.ts` owns `Unit`, `EvidenceUnits`, `UNITS_VERSION = 1`, `estimateTokens`, and typography normalization for matching. `services/units.ts` is the only builder; the transcript GET/manual-save responses include its output alongside original segments. Saves validate before replacing a usable revision.
-- `createRetrieval({ db, provider, model, log? })` returns `ensureChunks(transcriptId)` and `retrieve(transcriptId, query, { topK?, budgetTokens? })`. Pass the exact immutable transcript revision ID. The provider is the existing OpenRouter adapter; configured model names key the cache even when OpenRouter returns an alias. There is no public retrieval endpoint or embedding on page load: WP-08 calls the service only when long-transcript chat needs it.
+- `createRetrieval({ db, provider, model, log? })` returns `ensureChunks(transcriptId)` and `retrieve(transcriptId, query, { topK?, budgetTokens?, signal? })`. Pass the exact immutable transcript revision ID. The provider is the existing OpenRouter adapter; configured model names key the cache even when OpenRouter returns an alias. There is no public retrieval endpoint or embedding on page load: WP-08 calls the service only when long-transcript chat needs it.
 - Chunks contain whole units, up to 350 estimated text tokens, and embed in batches of at most 64. Concurrent builds share one promise; failed rebuilds preserve the old cache. Vectors are validated, normalized, and stored as float32 bytes in the existing chunks table. No migration was needed.
 - Retrieval defaults to six hits plus immediate neighbours and a 12,000-token budget. Results are deduplicated and ordered by source time, preserving input order for untimed or tied units. The budget is the sum of `estimateTokens(unit.text)` and cuts at a whole-unit boundary; callers account for citation headers and other prompt material separately. Query/dimension failures propagate without hidden retries. Logs include reported cost (null when unknown), usage, requested/returned models, purpose, and transcript ID, without transcript/query text.
 - The reader filters and highlights unit spans while retaining paragraph typography and full exports. Following centers the actual multiline unit bounds; explicit timestamp clicks resume centering. A caption split between speakers keeps the same source time for both units, so the last covering unit wins during playback rather than inventing intra-caption timings.
@@ -763,6 +763,8 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 ---
 
 ### WP-08: Chat
+
+**Status:** implemented and locally verified on 2026-10-03; **real-model verification pending**, explicitly deferred by the user because `OPENROUTER_API_KEY` is not configured. This WP is not marked Done. Evidence is in the [work log](work-log.md#wp-08-chat-2026-10-03).
 
 **Goal:** grounded, streaming, persistent conversations per video, with validated timestamp citations and saving to documents.
 
@@ -821,7 +823,7 @@ Rules:
 - **"Ask AI"** from the transcript opens a new conversation with the composer prefilled `About [m:ss] "<selection>": ` and the cursor at the end. It's not auto-sent (no paid output without an explicit action).
 
 **Acceptance criteria.**
-- [ ] Tests with a fake OpenRouter stream cover:
+- [x] Tests with a fake OpenRouter stream cover:
   - SSE event order;
   - a second send while generating returns `409`;
   - a client disconnect still ends in `complete` in the DB;
@@ -836,6 +838,16 @@ Rules:
   - switch tabs mid-stream, come back, and the answer completes;
   - save the answer as a document;
   - on the long video, ask a question and the answer cites passages from the relevant part (retrieval mode in `context_json`).
+
+**As built (locally verified)**
+- `createApp` owns one `ChatService`; production creates the configured adapter only when a key exists. Test injection uses the same adapter with controlled HTTP responses. Conversations and messages use the existing schema; no migration or dependency was added.
+- The POST inserts both messages atomically, freezes the transcript and chosen notes for that request, and buffers detached events. During deltas, progress is persisted no more than twice per second; GET also exposes current in-memory text. Completion validates citations before atomically saving content, context, citations, model, and accounting. A stream ending without a provider completion marker is failed, retaining its partial text. The 2,000-token output limit produces an incomplete answer. Stop is explicit; disconnect and navigation only stop the HTTP subscription. Graceful shutdown saves interrupted answers and ends streams before closing the server; startup recovery still handles abrupt exits.
+- One active answer per conversation is backed by the existing partial unique index; two answers may run across the app. A third returns `429 AI_BUSY` before inserting a question. Question length is capped at 8,000 characters and selection prefills at 7,500. At most four distinct text documents from this video can be selected; attachments and other videos’ documents are refused before provider work. Each note is capped at 14,000 characters (at most 4,000 estimated tokens including its header), each history message at 8,000, and the assembled prompt at 64,000 estimated tokens. History citation IDs are stripped so an old answer cannot supply IDs for a different revision.
+- `context_json` also records the exact `unitIds` supplied. `usage_json` is `{ usage, provider, generationId, latencyMs }`, with reported token/cost accounting nested under `usage`; unknown cost stays null. Adapter metadata is captured while streaming so failures and Stop preserve the returned model and generation ID when available. No automatic paid retries are made.
+- Retrieval now accepts a cancellation signal. Concurrent questions share an index build; cancelling one preserves the other, and cancelling the last waiter aborts source embedding without replacing a usable cache. Query embedding is cancellable too.
+- `/videos/:videoId/chat/:conversationId?` adds the desktop conversation list, rename/delete, messages, note sources, composer, Stop, unsent suggestion chips, and per-answer save/append/copy. Navigation aborts the subscription; reopening polls a generating message every 1.5 s. A lost request acknowledgement checks persisted state instead of resending. Unacknowledged drafts remain available; typing a new draft before acknowledgement does not erase it.
+- Transcript selections open a new, unsent conversation and focus the composer at its end. Untimed selections say “About this passage”. Citations and saved Markdown include `transcriptId` and `unit`, alongside `t` for timed sources. Transcript GET accepts an optional video-scoped revision ID; the reader shows the cited revision, centers and outlines its exact unit, and offers the current transcript. Missing revisions show an error. Untimed citations are passage links with no fabricated time.
+- Controlled browser checks cover the app’s full local flow. They do **not** establish real-model grounding, refusal quality, or long-video retrieval relevance. The live acceptance group above remains unchecked; configure `OPENROUTER_API_KEY` and restart the app before completing it. No paid calls were made.
 
 ---
 

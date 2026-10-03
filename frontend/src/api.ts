@@ -24,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-async function checked<R extends Response>(request: Promise<R>): Promise<R> {
+export async function checked<R extends Response>(request: Promise<R>): Promise<R> {
   let res: R;
   try {
     res = await request;

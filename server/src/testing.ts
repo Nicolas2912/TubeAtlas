@@ -2,6 +2,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ChatProvider } from './services/chat.ts';
 import { createApp } from './app.ts';
 import { loadConfig } from './config.ts';
 import { migrate, open } from './db.ts';
@@ -21,7 +22,7 @@ export const unusedYouTube: YouTube = {
   },
 };
 
-export function createTestApp(options: { env?: Record<string, string>; youtube?: YouTube } = {}) {
+export function createTestApp(options: { env?: Record<string, string>; youtube?: YouTube; openrouter?: ChatProvider } = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'tubeatlas-test-'));
   const config = loadConfig({ DATA_DIR: dataDir, PORT: '5170', ...options.env });
   const db = open(dataDir);
@@ -29,20 +30,21 @@ export function createTestApp(options: { env?: Record<string, string>; youtube?:
   const youtube = options.youtube ?? unusedYouTube;
   const jobs = createJobRunner(db, { transcript: transcriptJobHandler(youtube) });
   jobs.start();
-  const { app } = createApp({ db, config, youtube, jobs });
+  const { app, chat } = createApp({ db, config, youtube, jobs, openrouter: options.openrouter });
   return {
     app,
     db,
     config,
     dataDir,
     jobs,
+    chat,
     /** Sends a request as the local browser would (loopback host). */
     request: (path: string, init?: RequestInit) => app.request(`${TEST_ORIGIN}${path}`, init),
     /** Sends a JSON body as the local browser would. */
     json: (method: string, path: string, body: unknown) =>
       app.request(`${TEST_ORIGIN}${path}`, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
     cleanup: async () => {
-      await jobs.stop();
+      await Promise.all([jobs.stop(), chat.stop()]);
       db.close();
       rmSync(dataDir, { recursive: true, force: true });
     },

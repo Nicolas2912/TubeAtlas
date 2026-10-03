@@ -15,9 +15,11 @@ import { transcriptRoutes } from './routes/transcripts.ts';
 import { videoRoutes } from './routes/videos.ts';
 import { documentRoutes, videoDocumentRoutes } from './routes/documents.ts';
 import { assetRoutes, videoAssetRoutes } from './routes/assets.ts';
+import { createChatService, type ChatProvider } from './services/chat.ts';
+import { conversationRoutes, messageRoutes, videoConversationRoutes } from './routes/chat.ts';
 import { DEV_WEB_PORT } from '../../shared/ports.ts';
 
-export type AppDeps = { db: Db; config: Config; youtube: YouTube; jobs: JobRunner };
+export type AppDeps = { db: Db; config: Config; youtube: YouTube; jobs: JobRunner; openrouter?: ChatProvider };
 
 const frontendDist = fileURLToPath(new URL('../../frontend/dist', import.meta.url));
 
@@ -61,6 +63,7 @@ function bodyLimits(): MiddlewareHandler {
 
 export function createApp(deps: AppDeps) {
   const { config } = deps;
+  const chat = createChatService({ db: deps.db, config, provider: deps.openrouter });
   const api = new Hono()
     .use(bodyLimits())
     .get('/health', (c) =>
@@ -74,10 +77,13 @@ export function createApp(deps: AppDeps) {
         dataDir: config.dataDir,
       }),
     )
-    .route('/videos', videoRoutes(deps))
+    .route('/videos', videoRoutes({ ...deps, chat }))
     .route('/videos', transcriptRoutes(deps))
     .route('/videos', videoDocumentRoutes(deps))
     .route('/videos', videoAssetRoutes(deps))
+    .route('/videos', videoConversationRoutes(chat))
+    .route('/conversations', conversationRoutes(chat))
+    .route('/messages', messageRoutes(chat))
     .route('/documents', documentRoutes(deps))
     .route('/assets', assetRoutes(deps))
     .route('/topics', topicRoutes(deps))
@@ -101,7 +107,7 @@ export function createApp(deps: AppDeps) {
     return html === null ? c.text('Frontend not built. Run npm run build, or use npm run dev.', 404) : c.html(html);
   });
 
-  return { app, api };
+  return { app, api, chat };
 }
 
 export type AppType = ReturnType<typeof createApp>['api'];

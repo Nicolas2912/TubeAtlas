@@ -45,9 +45,14 @@ export function saveTranscript(
 }
 
 export function getCurrentTranscript(db: Db, videoId: number): Transcript | null {
+  return getTranscript(db, videoId);
+}
+
+/** An explicitly requested revision must belong to this video; old citation sources stay readable. */
+export function getTranscript(db: Db, videoId: number, transcriptId?: number): Transcript | null {
   const row = db
-    .prepare('SELECT id, revision, language, source, timed, segments_json FROM transcripts WHERE video_id = ? AND is_current = 1')
-    .get(videoId) as
+    .prepare(`SELECT id, revision, language, source, timed, segments_json FROM transcripts WHERE video_id = ? AND ${transcriptId === undefined ? 'is_current = 1' : 'id = ?'}`)
+    .get(...(transcriptId === undefined ? [videoId] : [videoId, transcriptId])) as
     | { id: number; revision: number; language: string | null; source: TranscriptSource; timed: number; segments_json: string }
     | undefined;
   if (!row) return null;

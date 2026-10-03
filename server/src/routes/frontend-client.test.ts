@@ -22,7 +22,7 @@ test('the frontend client reaches the API sub-app, including topics, filtering, 
   assert.ok(job);
   await app.jobs.idle();
   assert.equal((await unwrap(api.jobs[':id'].$get({ param: { id: String(job.id) } }))).status, 'succeeded');
-  const transcript = await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) } }));
+  const transcript = await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) }, query: {} }));
   assert.equal(transcript.timed, true);
   assert.equal(transcript.segments[0]!.start, 0);
   assert.equal(transcript.unitsVersion, 1);

@@ -6,7 +6,7 @@ import { formatTime } from '../../../shared/time.ts';
 
 export type VideoContext = { video: VideoSummary; job: Job | null; reload: () => void };
 
-const tabs = [{ label: 'Watch & Read', to: 'watch' }, { label: 'Documents', to: 'documents' }];
+const tabs = [{ label: 'Watch & Read', to: 'watch' }, { label: 'Chat', to: 'chat' }, { label: 'Documents', to: 'documents' }];
 
 export function useVideoContext() { return useOutletContext<VideoContext>(); }
 

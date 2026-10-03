@@ -22,17 +22,18 @@ export function createRetrieval(options: {
 }) {
   const { db, provider, model } = options;
   const log = options.log ?? ((entry: EmbeddingLog) => console.info('Embedding usage', entry));
-  const building = new Map<number, Promise<Chunk[]>>();
+  const building = new Map<number, { promise: Promise<Chunk[]>; controller: AbortController; users: number }>();
 
-  async function embed(transcriptId: number, input: string[], purpose: EmbeddingLog['purpose']) {
-    const result = await provider.embed({ model, input });
+  async function embed(transcriptId: number, input: string[], purpose: EmbeddingLog['purpose'], signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    const result = await provider.embed({ model, input, signal });
     // Record reported cost even if the returned vectors subsequently fail validation.
     log({ purpose, transcriptId, requestedModel: model, model: result.model, inputs: input.length, cost: result.usage?.cost ?? null, usage: result.usage });
     if (result.vectors.length !== input.length) badVectors();
     return result.vectors.map(normalizedVector);
   }
 
-  async function build(transcriptId: number): Promise<Chunk[]> {
+  async function build(transcriptId: number, signal: AbortSignal): Promise<Chunk[]> {
     const row = db.prepare('SELECT segments_json FROM transcripts WHERE id = ?').get(transcriptId) as { segments_json: string } | undefined;
     if (!row) throw new AppError(404, 'NO_TRANSCRIPT', 'That transcript revision no longer exists.');
     const { units } = buildUnits(JSON.parse(row.segments_json) as Segment[]);
@@ -66,10 +67,11 @@ export function createRetrieval(options: {
     }
     for (let offset = 0; offset < chunks.length; offset += 64) {
       const batch = chunks.slice(offset, offset + 64);
-      const vectors = await embed(transcriptId, batch.map((c) => c.text), 'chunks');
+      const vectors = await embed(transcriptId, batch.map((c) => c.text), 'chunks', signal);
       vectors.forEach((vector, i) => { batch[i]!.embedding = vector; });
     }
     if (chunks.some((c) => c.embedding.length !== chunks[0]!.embedding.length)) badVectors();
+    signal.throwIfAborted();
     // Keep the last usable cache until every batch succeeds. Never hold a DB transaction over HTTP.
     tx(db, () => {
       if (!db.prepare('SELECT id FROM transcripts WHERE id = ?').get(transcriptId)) {
@@ -86,21 +88,41 @@ export function createRetrieval(options: {
     return chunks;
   }
 
-  async function ensureChunks(transcriptId: number): Promise<Chunk[]> {
+  async function ensureChunks(transcriptId: number, signal?: AbortSignal): Promise<Chunk[]> {
+    signal?.throwIfAborted();
     let pending = building.get(transcriptId);
-    if (!pending) { pending = build(transcriptId); building.set(transcriptId, pending); }
-    try { return await pending; }
-    finally { if (building.get(transcriptId) === pending) building.delete(transcriptId); }
+    if (!pending) {
+      const controller = new AbortController();
+      pending = { promise: build(transcriptId, controller.signal), controller, users: 0 };
+      building.set(transcriptId, pending);
+    }
+    pending.users++;
+    let abort: (() => void) | undefined;
+    try {
+      return await new Promise<Chunk[]>((resolve, reject) => {
+        abort = () => reject(signal!.reason);
+        signal?.addEventListener('abort', abort, { once: true });
+        if (signal?.aborted) abort();
+        pending!.promise.then(resolve, reject);
+      });
+    } finally {
+      if (abort) signal?.removeEventListener('abort', abort);
+      if (--pending.users === 0) {
+        if (building.get(transcriptId) === pending) building.delete(transcriptId);
+        pending.controller.abort(); // Last caller cancelled: stop paid source preparation too.
+      }
+    }
   }
 
-  async function retrieve(transcriptId: number, query: string, { topK = 6, budgetTokens = 12000 }: { topK?: number; budgetTokens?: number } = {}): Promise<Unit[]> {
+  async function retrieve(transcriptId: number, query: string, { topK = 6, budgetTokens = 12000, signal }: { topK?: number; budgetTokens?: number; signal?: AbortSignal } = {}): Promise<Unit[]> {
+    signal?.throwIfAborted();
     if (!Number.isSafeInteger(topK) || topK < 0 || !Number.isSafeInteger(budgetTokens) || budgetTokens < 0) {
       throw new AppError(400, 'INVALID_RETRIEVAL', 'Retrieval limits must be non-negative integers.');
     }
     if (!query.trim() || topK === 0 || budgetTokens === 0) return [];
-    const chunks = await ensureChunks(transcriptId);
+    const chunks = await ensureChunks(transcriptId, signal);
     if (!chunks.length) return [];
-    const [vector] = await embed(transcriptId, [query], 'query');
+    const [vector] = await embed(transcriptId, [query], 'query', signal);
     if (vector!.length !== chunks[0]!.embedding.length) badVectors();
     const scored = chunks.map((chunk) => ({ ord: chunk.ord, score: chunk.embedding.reduce((sum, value, i) => sum + value * vector![i]!, 0) }))
       .sort((a, b) => b.score - a.score || a.ord - b.ord);

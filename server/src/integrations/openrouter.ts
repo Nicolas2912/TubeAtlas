@@ -32,6 +32,7 @@ export type StructuredResult = {
 };
 
 export type EmbedResult = { vectors: Float32Array[]; model: string; usage: Usage | null };
+export type ChatMetadata = Pick<ChatResult, 'model' | 'provider' | 'usage' | 'generationId' | 'finishReason' | 'latencyMs'>;
 
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
 
@@ -108,6 +109,7 @@ export function createOpenRouter(options: {
     maxTokens?: number;
     signal?: AbortSignal;
     onDelta: (text: string) => void;
+    onMetadata?: (metadata: ChatMetadata) => void;
   }): Promise<ChatResult> {
     const started = Date.now();
     const result: ChatResult = { text: '', model: args.model, provider: null, finishReason: null, usage: null, generationId: null, latencyMs: 0 };
@@ -122,15 +124,16 @@ export function createOpenRouter(options: {
         } catch {
           throw new AppError(502, 'PROVIDER_BAD_RESPONSE', 'OpenRouter sent an unreadable stream chunk.', true);
         }
-        if (chunk.error) {
-          throw new AppError(502, 'PROVIDER_ERROR', `OpenRouter reported an error mid-stream${providerMessage(JSON.stringify(chunk))}`, true);
-        }
         if (typeof chunk.id === 'string') result.generationId = chunk.id;
         if (typeof chunk.model === 'string') result.model = chunk.model;
         if (typeof chunk.provider === 'string') result.provider = chunk.provider;
         if (chunk.usage) result.usage = normalizeUsage(chunk.usage);
         const choice = chunk.choices?.[0];
         if (choice?.finish_reason) result.finishReason = choice.finish_reason;
+        args.onMetadata?.({ model: result.model, provider: result.provider, usage: result.usage, generationId: result.generationId, finishReason: result.finishReason, latencyMs: Date.now() - started });
+        if (chunk.error) {
+          throw new AppError(502, 'PROVIDER_ERROR', `OpenRouter reported an error mid-stream${providerMessage(JSON.stringify(chunk))}`, true);
+        }
         const delta = choice?.delta?.content;
         if (typeof delta === 'string' && delta !== '') {
           result.text += delta;

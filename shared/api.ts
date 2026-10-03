@@ -30,6 +30,13 @@ export const TopicBody = z.strictObject({ name: z.string().trim().min(1).max(80)
 export const VideoListQuery = z.object({ topicId: z.coerce.number().int().positive().optional() });
 
 export const IdParam = z.object({ id: z.coerce.number().int().positive() });
+export const TranscriptQuery = z.object({ transcriptId: z.coerce.number().int().positive().optional() });
+export const ConversationBody = z.strictObject({ title: z.string().trim().min(1).max(200).optional() });
+export const RenameConversationBody = z.strictObject({ title: z.string().trim().min(1).max(200) });
+export const ChatMessageBody = z.strictObject({
+  content: z.string().trim().min(1).max(8000),
+  documentIds: z.array(z.number().int().positive()).max(4).default([]),
+});
 
 const TextKind = z.enum(['note', 'summary', 'study_guide', 'qa']);
 const DocumentTitle = z.string().trim().min(1).max(200);

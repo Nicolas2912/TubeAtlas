@@ -15,7 +15,7 @@ TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives i
 - Read configured models, key presence, the data directory, and backup instructions in Settings.
 - Use the desktop interface, including keyboard navigation. The current release is desktop-only.
 
-The reader now uses stable evidence units for search, playback highlighting, and quote sources. Scoped retrieval is ready for Chat, the next work package. Chat and the knowledge graph will appear as they are completed.
+The reader uses stable evidence units for search, playback highlighting, and quote sources. Desktop Chat now supports saved conversations, streaming answers, source links, Stop, selected notes, and saving answers to documents. Set `OPENROUTER_API_KEY` in `.env` and restart the app to enable sending. Local verification passes; real-model grounding and long-video retrieval checks remain pending at the user’s request. The knowledge graph will appear when its work packages are completed.
 
 ## Requirements
 

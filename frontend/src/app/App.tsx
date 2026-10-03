@@ -8,6 +8,7 @@ const Topics = lazy(() => import('../features/topics/TopicsPage.tsx'));
 const Settings = lazy(() => import('../features/settings/SettingsPage.tsx'));
 const Video = lazy(() => import('./VideoLayout.tsx'));
 const Watch = lazy(() => import('../features/watch/WatchPage.tsx'));
+const Chat = lazy(() => import('../features/chat/ChatPage.tsx'));
 const Documents = lazy(() => import('../features/documents/DocumentsPage.tsx'));
 
 function OpenReader() {
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
       { path: 'topics', element: <Topics /> },
       { path: 'topics/:topicId', element: <Topics /> },
       { path: 'settings', element: <Settings /> },
-      { path: 'videos/:videoId', element: <Video />, children: [{ index: true, element: <OpenReader /> }, { path: 'watch', element: <Watch /> }, { path: 'documents/:documentId?', element: <Documents /> }] },
+      { path: 'videos/:videoId', element: <Video />, children: [{ index: true, element: <OpenReader /> }, { path: 'watch', element: <Watch /> }, { path: 'chat/:conversationId?', element: <Chat /> }, { path: 'documents/:documentId?', element: <Documents /> }] },
       { path: '*', element: <RouteError />, errorElement: <RouteError />, loader: () => { throw new Response('Not found', { status: 404 }); } },
     ],
   },

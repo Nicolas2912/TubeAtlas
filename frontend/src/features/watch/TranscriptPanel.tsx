@@ -15,14 +15,14 @@ function highlighted(text: string, matches: TextMatch[], selected: TextMatch | u
   return parts;
 }
 
-export function TranscriptPanel({ transcript, video, time, ready, seek }: { transcript: Transcript; video: VideoSummary; time: number; ready: boolean; seek: (seconds: number) => void }) {
+export function TranscriptPanel({ transcript, video, time, ready, seek, targetUnit, archived }: { transcript: Transcript; video: VideoSummary; time: number; ready: boolean; seek: (seconds: number) => void; targetUnit?: string | null; archived?: boolean }) {
   const units = transcript.units;
   const passages = useMemo(() => groupPassages(units), [units]);
   const unitIndexes = useMemo(() => new Map(units.map((unit, index) => [unit.id, index])), [units]);
   const indexes = useMemo(() => units.map((unit) => prepareSearch(unit.text)), [units]);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [follow, setFollow] = useState(true);
+  const [follow, setFollow] = useState(!targetUnit);
   const scroller = useRef<HTMLDivElement>(null);
   const manualScroll = useRef(0);
   const matches = useMemo(() => indexes.map((index) => findTextMatches(index, query)), [indexes, query]);
@@ -43,6 +43,12 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
     if (follow && !searching && active >= 0 && Date.now() - manualScroll.current >= 5000) center(active);
   }, [active, follow, searching]);
   useEffect(() => { if (selected) center(selected.unitIndex); }, [selected]);
+
+  useEffect(() => {
+    if (!targetUnit) return;
+    const index = unitIndexes.get(targetUnit);
+    if (index !== undefined) { setQuery(''); setFollow(false); center(index); }
+  }, [targetUnit, unitIndexes]);
 
   function moveMatch(delta: number) { setSelectedIndex((index) => (index + delta + results.length) % results.length); }
 
@@ -65,12 +71,12 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
       <p>{visible.map((unit, position) => {
         const unitIndex = unitIndexes.get(unit.id)!;
         return <span key={unit.id}>{position > 0 && ' '}<span data-unit-id={unit.id} data-unit-index={unitIndex} data-start={unit.start ?? undefined}
-          className={`evidence-unit${unitIndex === active ? ' active-unit' : ''}`} aria-current={unitIndex === active ? 'true' : undefined}>
+          className={`evidence-unit${unitIndex === active ? ' active-unit' : ''}${unit.id === targetUnit ? ' cited-unit' : ''}`} aria-current={unitIndex === active ? 'true' : undefined}>
           {highlighted(unit.text, matches[unitIndex]!, selected?.unitIndex === unitIndex ? selected.match : undefined)}
         </span></span>;
       })}</p>
     </div>;
-  }), [passages, unitIndexes, searching, matches, selected, active, ready, seek]);
+  }), [passages, unitIndexes, searching, matches, selected, active, ready, seek, targetUnit]);
 
   return <section className="transcript-panel panel" aria-labelledby="transcript-title">
     <div className="transcript-heading">
@@ -81,6 +87,8 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
         <button className="link-button" disabled={!transcript.timed} onClick={() => download(true)}>With timestamps (.md)</button>
       </div></details>
     </div>
+    {archived && <p className="muted untimed-notice">Source transcript · revision {transcript.revision}. <a href={`/videos/${video.id}/watch`}>Read the current transcript</a></p>}
+    {targetUnit && !unitIndexes.has(targetUnit) && <p className="error" role="alert">This source passage is no longer available.</p>}
     {!transcript.timed && <p className="muted untimed-notice">This transcript has no timestamps. Seeking and follow playback are unavailable.</p>}
     <input className="input" type="search" aria-label="Search transcript" placeholder="Search transcript…" value={query} onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }} />
     {searching && <div className="match-navigation">

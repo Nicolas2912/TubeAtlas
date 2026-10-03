@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Link } from 'react-router';
+import { askAbout } from '../../../../shared/chat.ts';
+import { Link, useNavigate } from 'react-router';
 import { api, errorMessage, unwrap, useApi, type Document } from '../../api.ts';
 import { LoadError } from '../../components/LoadError.tsx';
 import { transcriptQuote } from '../../../../shared/documents.ts';
@@ -8,6 +9,7 @@ import type { Unit } from '../../../../shared/units.ts';
 type Quote = { text: string; start: number | null; left: number; top: number };
 
 export function SaveToNote({ scroller, units, videoId }: { scroller: RefObject<HTMLDivElement | null>; units: Unit[]; videoId: number }) {
+  const navigate = useNavigate();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [open, setOpen] = useState(false);
   const frozen = useRef(false);
@@ -79,9 +81,19 @@ export function SaveToNote({ scroller, units, videoId }: { scroller: RefObject<H
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(false); }
   }
+  async function askAI() {
+    if (!quote) return;
+    if (quote.text.length > 7500) { setError('Select a shorter passage to ask about (up to 7,500 characters).'); return; }
+    frozen.current = true; setBusy(true); setError(null);
+    try {
+      const conversation = await unwrap(api.videos[':id'].conversations.$post({ param: { id: String(videoId) }, json: {} }));
+      navigate(`/videos/${videoId}/chat/${conversation.id}`, { state: { prefill: askAbout(quote.text, quote.start) } });
+    } catch (err) { setError(errorMessage(err)); frozen.current = false; }
+    finally { setBusy(false); }
+  }
   if (!quote) return null;
   return <div ref={panel} className="selection-note" style={{ left: quote.left, top: quote.top }}>
-    {!open ? <button className="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { frozen.current = true; setOpen(true); }}>Save to note</button> : <section aria-label="Save selected transcript to note">
+    {!open ? <><button className="button" disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void askAI()}>Ask AI</button> <button className="button" disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => { frozen.current = true; setOpen(true); }}>Save to note</button>{error && <p className="error" role="alert">{error}</p>}</> : <section aria-label="Save selected transcript to note">
       <div className="selection-heading"><strong>Save to note</strong><button className="button small" disabled={busy} onClick={() => close()}>Close</button></div>
       {saved ? <p role="status">Saved. <Link to={`/videos/${videoId}/documents/${saved.id}`}>Open {saved.title}</Link></p> : <>
         <p className="muted">{quote.start === null ? 'Selected text · no timestamp' : 'Selected text with a source link'}</p>

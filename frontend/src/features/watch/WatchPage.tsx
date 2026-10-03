@@ -13,13 +13,15 @@ import { ManualTranscript } from './ManualTranscript.tsx';
 function WatchReader({ video, job, reload }: VideoContext) {
   const [params] = useSearchParams();
   const requested = params.get('t');
+  const revision = params.get('transcriptId');
+  const unit = params.get('unit');
   const previousRequest = useRef(requested);
   const initialTime = useRef(playbackTarget(requested, video.playbackSeconds, video.durationSeconds));
   const player = usePlayer(video, initialTime.current);
   const transcript = useApi(async () => {
-    try { return await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) } })); }
-    catch (err) { if (err instanceof ApiError && err.code === 'NO_TRANSCRIPT') return null; throw err; }
-  }, [video.id, video.transcriptStatus]);
+    try { return await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) }, query: revision ? { transcriptId: revision } : {} })); }
+    catch (err) { if (err instanceof ApiError && err.code === 'NO_TRANSCRIPT' && !revision) return null; throw err; }
+  }, [video.id, video.transcriptStatus, revision]);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const status = transcriptStatus(video, job);
@@ -51,7 +53,7 @@ function WatchReader({ video, job, reload }: VideoContext) {
       <p className="muted reader-hint">Click a transcript timestamp to jump to that moment. Your playback position is saved as you watch.</p>
     </section>
     {transcript.error !== undefined ? <LoadError error={transcript.error} retry={transcript.reload} /> : transcript.data ?
-      <TranscriptPanel key={transcript.data.transcriptId} transcript={transcript.data} video={video} time={player.time} ready={player.ready} seek={player.seek} /> :
+      <TranscriptPanel key={transcript.data.transcriptId} transcript={transcript.data} video={video} time={player.time} ready={player.ready} seek={player.seek} targetUnit={unit} archived={revision !== null} /> :
       <section className="panel transcript-fallback" aria-label="Transcript">
         <h2>Transcript</h2>
         {transcript.loading ? <p role="status">Loading transcript…</p> : <>

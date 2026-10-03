@@ -150,3 +150,23 @@ test('query dimension mismatch is explicit, empty transcripts are free, and dele
   await assert.rejects(deleting.ensureChunks(id), /no longer exists/u);
   assert.deepEqual(app.db.prepare('SELECT count(*) AS n FROM chunks').get(), { n: 0 });
 });
+
+test('cancelling one shared build preserves the other caller; the last cancellation stops embedding without writing a cache', async (t) => {
+  const app = createTestApp(); t.after(app.cleanup); video(app.db, 1); const id = transcript(app.db, 1, 'lantern');
+  const requests: { signal: AbortSignal; resolve: (result: EmbedResult) => void }[] = [];
+  const service = createRetrieval({ db: app.db, model: 'model', log: () => {}, provider: { embed: ({ input, signal }) => new Promise((resolve, reject) => {
+    requests.push({ signal: signal!, resolve }); signal!.addEventListener('abort', () => reject(signal!.reason), { once: true });
+  }) } });
+  const first = new AbortController(), second = new AbortController();
+  const a = service.ensureChunks(id, first.signal), b = service.ensureChunks(id, second.signal);
+  first.abort(); await assert.rejects(a, { name: 'AbortError' }); assert.equal(requests[0]!.signal.aborted, false);
+  requests[0]!.resolve({ model: 'model', usage: null, vectors: Array.from({ length: 5 }, () => new Float32Array([1, 0])) });
+  assert.equal((await b).length, 5);
+  app.db.prepare('DELETE FROM chunks').run();
+  const last = new AbortController(); const c = service.ensureChunks(id, last.signal);
+  last.abort(); await assert.rejects(c, { name: 'AbortError' }); assert.equal(requests[1]!.signal.aborted, true);
+  assert.deepEqual(app.db.prepare('SELECT count(*) AS n FROM chunks').get(), { n: 0 });
+  const retry = service.ensureChunks(id);
+  requests[2]!.resolve({ model: 'model', usage: null, vectors: Array.from({ length: 5 }, () => new Float32Array([1, 0])) });
+  assert.equal((await retry).length, 5);
+});

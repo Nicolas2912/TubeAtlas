@@ -19,19 +19,19 @@ if (recovered.jobs || recovered.messages) {
 
 const youtube = createYouTube({ apiKey: config.youtubeApiKey });
 const jobs = createJobRunner(db, { transcript: transcriptJobHandler(youtube) });
-const { app } = createApp({ db, config, youtube, jobs });
+const { app, chat } = createApp({ db, config, youtube, jobs });
 jobs.start();
 const server = serve({ fetch: app.fetch, hostname: '127.0.0.1', port: config.port }, (info) => {
   console.log(`TubeAtlas listening on http://127.0.0.1:${info.port} (data: ${config.dataDir})`);
 });
 
-function shutdown() {
-  server.close(async () => {
-    // Give a running job a moment to finish; anything still running becomes 'interrupted' on the next start.
-    await Promise.race([jobs.stop(), new Promise((resolve) => setTimeout(resolve, 3000))]);
-    db.close();
-    process.exit(0);
-  });
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  // End active SSE responses before waiting for the HTTP server to close.
+  await Promise.race([Promise.all([chat.stop(), jobs.stop()]), new Promise((resolve) => setTimeout(resolve, 3000))]);
+  server.close(() => { db.close(); process.exit(0); });
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
