@@ -65,6 +65,30 @@ test('import creates the video and a transcript job; the job stores timed segmen
   assert.deepEqual(calls, { metadata: 1, transcript: 1 });
 });
 
+test('caption retry can recover a blocked outcome, reuses active work, and protects a ready transcript', async (t) => {
+  let blocked = true;
+  const { youtube, calls } = fakeYouTube(async () => blocked ? { status: 'blocked', message: 'Caption access was blocked.' } : { status: 'ready', language: 'en', segments: SEGMENTS });
+  const { json, request, jobs } = await setup(t, youtube);
+  const { video, job } = await (await json('POST', '/api/videos/import', { url: URL_ })).json();
+  await jobs.idle();
+  assert.equal(jobs.get(job.id)?.status, 'succeeded');
+  assert.equal((await (await request(`/api/videos/${video.id}`)).json()).transcriptStatus, 'blocked');
+  blocked = false;
+  const retried = await json('POST', `/api/videos/${video.id}/transcript/retry`, {});
+  assert.equal(retried.status, 201);
+  const next = await retried.json();
+  const duplicate = await (await json('POST', `/api/videos/${video.id}/transcript/retry`, {})).json();
+  assert.equal(next.id, duplicate.id);
+  assert.notEqual(next.id, job.id);
+  await jobs.idle();
+  assert.equal((await (await request(`/api/videos/${video.id}`)).json()).transcriptStatus, 'ready');
+  const ready = await json('POST', `/api/videos/${video.id}/transcript/retry`, {});
+  assert.equal(ready.status, 409);
+  assert.equal((await ready.json()).error.code, 'TRANSCRIPT_READY');
+  assert.equal(calls.transcript, 2);
+  assert.equal((await json('POST', '/api/videos/999/transcript/retry', {})).status, 404);
+});
+
 test('importing the same video again returns the existing one (200) without new work', async (t) => {
   const { youtube, calls } = fakeYouTube();
   const { json, jobs } = await setup(t, youtube);

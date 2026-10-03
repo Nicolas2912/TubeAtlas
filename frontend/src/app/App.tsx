@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router';
 import { Shell } from './Shell.tsx';
 import { RouteError } from './RouteError.tsx';
 
@@ -7,7 +7,12 @@ const Library = lazy(() => import('../features/library/LibraryPage.tsx'));
 const Topics = lazy(() => import('../features/topics/TopicsPage.tsx'));
 const Settings = lazy(() => import('../features/settings/SettingsPage.tsx'));
 const Video = lazy(() => import('./VideoLayout.tsx'));
-const VideoOverview = lazy(() => import('./VideoLayout.tsx').then((module) => ({ default: module.VideoOverview })));
+const Watch = lazy(() => import('../features/watch/WatchPage.tsx'));
+
+function OpenReader() {
+  const location = useLocation();
+  return <Navigate to={`watch${location.search}`} replace />;
+}
 
 const router = createBrowserRouter([
   {
@@ -19,7 +24,7 @@ const router = createBrowserRouter([
       { path: 'topics', element: <Topics /> },
       { path: 'topics/:topicId', element: <Topics /> },
       { path: 'settings', element: <Settings /> },
-      { path: 'videos/:videoId', element: <Video />, children: [{ index: true, element: <VideoOverview /> }] },
+      { path: 'videos/:videoId', element: <Video />, children: [{ index: true, element: <OpenReader /> }, { path: 'watch', element: <Watch /> }] },
       { path: '*', element: <RouteError />, errorElement: <RouteError />, loader: () => { throw new Response('Not found', { status: 404 }); } },
     ],
   },

@@ -4,7 +4,7 @@ Status: execution plan, written September 26, 2026; progress reviewed October 3,
 
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
-- WP-00 through WP-04 are complete. WP-05 through WP-14 have not started. Next: WP-05 (Watch & Read). See the overview in §5 and the work log for verification evidence.
+- WP-00 through WP-05 are complete. WP-06 through WP-14 have not started. Next: WP-06 (Documents and attachments). See the overview in §5 and the work log for verification evidence.
 - The current release is desktop-only. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 
 ## 1. Rules for the implementing agent
@@ -146,7 +146,7 @@ Overview (→ = depends on):
 | 02 | OpenRouter adapter and provider check | 01 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27)) |
 | 03 | YouTube import, transcripts, job runner | 01 | 0–1 | **Done** 2026-09-27 ([log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27)) |
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-04-frontend-shell-library-topics-settings-2026-10-03)) |
-| 05 | Watch & Read | 04 | 1 | Not started |
+| 05 | Watch & Read | 04 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-05-watch--read-2026-10-03)) |
 | 06 | Documents and attachments | 05 | 2 | Not started |
 | 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
 | 08 | Chat | 06, 07 | 3 | Not started |
@@ -562,7 +562,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `/documents` → All documents (WP-13)
   - `/search` → Search (WP-13)
   - `/settings`
-  - `/videos/:videoId` → a real video overview in WP-04; redirect to `watch` when WP-05 lands
+  - `/videos/:videoId` → redirects to `watch` (the WP-04 overview was replaced in WP-05)
   - Add `/videos/:videoId/watch`, `/graph`, `/chat/:conversationId?`, `/documents/:documentId?` only as their WPs land
 
   Each view is lazy-loaded with `React.lazy`. Tabs whose WP isn't done yet aren't rendered.
@@ -570,7 +570,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - 190 px sidebar: logo "TubeAtlas", Library, Topics, and Settings at the bottom. All documents is added in WP-13.
   - Top bar with the search box (disabled until WP-13) and an "Import video" button.
   - Main outlet with the desktop sidebar always visible.
-- **Import dialog:** a URL field and an optional topic select or new topic. Submitting calls `POST /api/videos/import`, then navigates to `/videos/:videoId`. WP-05 switches that destination to `/videos/:videoId/watch`. Errors are shown inline with their message.
+- **Import dialog:** a URL field and an optional topic select or new topic. Submitting calls `POST /api/videos/import`, then navigates to `/videos/:videoId/watch`. Errors are shown inline with their message.
 - **Library:**
   - A grid or list of videos: thumbnail, title, channel, duration, topic chips, and transcript status as text (`Ready`, `Fetching transcript…`, `No captions`, `Blocked by YouTube`, `Failed`).
   - Active jobs show their stage via `useJob`.
@@ -600,14 +600,16 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `app/App.tsx` owns the router and lazy views; `main.tsx` only mounts React and imports the shared styles. This keeps routing updates from creating a second React root during development.
 - The typed client is `hc<AppType>('/api')`: `AppType` already describes the API sub-app. Do not append `.api` to this client.
 - Library, import, topic management, topic filtering, and read-only Settings use the real API. `useApi` retains data for a same-query reload and hides results from a different query; `useJob` polls active jobs every 2 s and reloads the video when they finish.
-- `/videos/:videoId` has a nested index overview with metadata, topic assignment, live transcript status, and an external YouTube link. `VideoLayout` provides the header, breadcrumb, conditional tabs, and an outlet whose `VideoContext` is `{ video, job, reload }`.
-- WP-05 adds the Watch & Read child route and its tab, then changes import/card destinations to `/videos/:videoId/watch` and redirects the bare video route there. The existing overview is functional, not a placeholder reader. Other tabs and All documents stay hidden until implemented; global search remains disabled until WP-13.
+- `VideoLayout` provides the header, breadcrumb, implemented tabs, and an outlet whose `VideoContext` is `{ video, job, reload }`, accessed through `useVideoContext()`. The original index overview was replaced by the reader in WP-05.
+- Imports/cards now open `/videos/:videoId/watch`, and the bare video route redirects there while retaining query parameters. Other tabs and All documents stay hidden until implemented; global search remains disabled until WP-13.
 - The desktop sidebar stays visible; there is no mobile menu or layout breakpoint. The import dialog uses a native modal dialog with explicit Tab/Shift+Tab wrapping, Escape closing, and focus restoration. The primary button uses `--accent-ink` for readable white text.
 - `server/src/routes/frontend-client.test.ts` exercises the actual frontend client against the server for API paths, imports, jobs, topics, filtering, settings, and error messages; its transcript text is invented.
 
 ---
 
 ### WP-05: Watch & Read
+
+**Status:** done on 2026-10-03; verification evidence is in the [work log](work-log.md#wp-05-watch--read-2026-10-03).
 
 **Goal:** the video plays beside a synchronized, searchable transcript, and passages can be sent to chat or saved to a note.
 
@@ -618,7 +620,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 **Implementation details.**
 - **Player:**
   - Load `https://www.youtube.com/iframe_api` once (a module-level promise), and write a minimal ambient type for `YT.Player` in `frontend/src/features/watch/yt.d.ts` (no `@types` package).
-  - `new YT.Player(el, { videoId, playerVars: { start, rel: 0, modestbranding: 1 } })`.
+  - `new YT.Player(el, { videoId, playerVars: { start, rel: 0, origin: window.location.origin } })`. `modestbranding` was deprecated and has no effect; omit it ([official player parameters](https://developers.google.com/youtube/player_parameters)).
   - While playing, read `getCurrentTime()` every 250 ms.
   - PATCH `playbackSeconds` every 10 s while playing and on pause.
   - `onError` codes 101/150 mean embedding is disabled: show "This video can't be played here" plus an "Open on YouTube" link at the current time.
@@ -629,15 +631,22 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **`?t=` parameter:** on load, seek there and highlight. Clamp to `[0, duration]` when the duration is known, and never alter stored times.
 - **Search:** filter-as-you-type (case- and diacritic-insensitive) that highlights matches and shows "3 of 17" with previous/next buttons.
 - **Selection toolbar:** when a selection lies inside one or more paragraphs, show a small floating toolbar near it with "Ask AI" and "Save to note", computing `{ text, start }` from the first selected paragraph. The toolbar is hidden until WP-06 and WP-08 connect the actions.
-- **No transcript:** show the status message and a "Add transcript" panel (paste text, or upload `.vtt`/`.srt`) that calls the manual endpoint. For `blocked`/`failed`, also show "Try again" (job retry). For untimed transcripts, hide timestamps and disable seeking, and explain why in one line.
+- **No transcript:** show the status message and a "Add transcript" panel (paste text, or upload `.vtt`/`.srt`) that calls the manual endpoint. For `blocked`/`failed`, also show "Try again" via `POST /api/videos/:id/transcript/retry`. This queues or reuses an active caption fetch; a ready transcript is protected with `409 TRANSCRIPT_READY`. Retrying a blocked outcome needs this operation because its earlier job completed successfully. For untimed transcripts, hide timestamps and disable seeking, and explain why in one line.
 - **Export menu:** "Transcript as text (.txt)" and "with timestamps (.md)", both generated client-side.
 
 **Acceptance criteria.**
-- [ ] With the English video: clicking a timestamp seeks the player; follow playback highlights the right paragraph over 30 s of playback; `/videos/:id/watch?t=300` starts at 5:00; reloading after pausing at some time resumes there.
-- [ ] The German video's transcript displays umlauts correctly, and search "ki" finds "KI".
-- [ ] The 2 h 40 min video: initial render and search stay responsive (measured and recorded).
-- [ ] A video with no captions (simulate by pasting text into a new import whose transcript failed, or use the fake adapter in dev) shows the paste/upload fallback, and after pasting, the text appears without timestamps.
-- [ ] Desktop width (1440×900): the player sits beside the transcript, and both are usable.
+- [x] With the English video: clicking a timestamp seeks the player; follow playback highlights the right paragraph over 30 s of playback; `/videos/:id/watch?t=300` starts at 5:00; reloading after pausing at some time resumes there.
+- [x] The German video's transcript displays umlauts correctly, and search "ki" finds "KI".
+- [x] The 2 h 40 min video: initial render and search stay responsive (measured and recorded).
+- [x] A video with no captions (simulate by pasting text into a new import whose transcript failed, or use the fake adapter in dev) shows the paste/upload fallback, and after pasting, the text appears without timestamps.
+- [x] Desktop width (1440×900): the player sits beside the transcript, and both are usable.
+
+**As built** (what later WPs need to know):
+- `features/watch/WatchPage.tsx` reads `useVideoContext()`. `usePlayer.ts` owns the real YouTube player, polling, seeking, and serialized playback saves (also on seek and leaving the page). A valid `?t=` takes precedence over the saved position on load. Failed player loading or saves have retry controls; the transcript remains readable when YouTube is unavailable.
+- `shared/watch.ts` provides source-preserving passage grouping, active-passage lookup, Unicode search indexes/ranges, playback clamping, and transcript exports. The reader caches indexes and rendered rows; the 4,841-segment transcript renders 522 passages without virtualization. WP-07 replaces the grouping with evidence units. Passage elements retain `data-passage-index` and `data-start` for subsequent selection actions.
+- `ManualTranscript.tsx` posts to the existing manual transcript endpoint. Plain text has no seeking or follow playback; VTT/SRT retain their times. Failed saves retain the draft. `shared/limits.ts` shares the size limit without pulling Zod into the reader bundle.
+- `POST /api/videos/:id/transcript/retry` returns a queued or active transcript job (201), `404 NOT_FOUND` for a missing video, or `409 TRANSCRIPT_READY` for an existing transcript. The shared video context resumes job polling after the retry. Manual saves and completed jobs refresh the reader.
+- The selection toolbar is still absent per rule 7: WP-06 adds Save to note and WP-08 adds Ask AI with their actual operations. Other video tabs stay hidden until their WPs are complete.
 
 ---
 

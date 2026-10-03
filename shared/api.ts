@@ -7,7 +7,7 @@ export type TranscriptStatus = 'pending' | 'ready' | 'no_captions' | 'blocked' |
 export type JobKind = 'transcript' | 'graph';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted';
 
-export const MAX_MANUAL_TRANSCRIPT_BYTES = 5 * 1024 * 1024;
+export { MAX_MANUAL_TRANSCRIPT_BYTES } from './limits.ts';
 
 export const ImportVideoBody = z.strictObject({
   url: z.string().trim().min(1).max(2000),

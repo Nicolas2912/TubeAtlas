@@ -22,6 +22,11 @@ test('the frontend client reaches the API sub-app, including topics, filtering, 
   assert.ok(job);
   await app.jobs.idle();
   assert.equal((await unwrap(api.jobs[':id'].$get({ param: { id: String(job.id) } }))).status, 'succeeded');
+  const transcript = await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) } }));
+  assert.equal(transcript.timed, true);
+  assert.equal(transcript.segments[0]!.start, 0);
+  await unwrap(api.videos[':id'].$patch({ param: { id: String(video.id) }, json: { playbackSeconds: 42.5 } }));
+  assert.equal((await unwrap(api.videos[':id'].$get({ param: { id: String(video.id) } }))).playbackSeconds, 42.5);
   await unwrap(api.videos[':id'].$patch({ param: { id: String(video.id) }, json: { topicIds: [topic.id] } }));
   const filtered = await unwrap(api.videos.$get({ query: { topicId: String(topic.id) } }));
   assert.deepEqual(filtered.map((v) => v.id), [video.id]);

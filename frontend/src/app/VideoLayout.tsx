@@ -2,12 +2,15 @@ import { Link, NavLink, Outlet, useOutletContext, useParams } from 'react-router
 import { api, unwrap, useApi, useJob, type Job, type VideoSummary } from '../api.ts';
 import { TopicPicker } from '../components/TopicPicker.tsx';
 import { LoadError } from '../components/LoadError.tsx';
-import { transcriptStatus } from '../features/library/status.ts';
 import { formatTime } from '../../../shared/time.ts';
 
 export type VideoContext = { video: VideoSummary; job: Job | null; reload: () => void };
 
-export default function VideoLayout({ tabs = [] }: { tabs?: { label: string; to: string }[] }) {
+const tabs = [{ label: 'Watch & Read', to: 'watch' }];
+
+export function useVideoContext() { return useOutletContext<VideoContext>(); }
+
+export default function VideoLayout() {
   const { videoId = '' } = useParams();
   const video = useApi(() => unwrap(api.videos[':id'].$get({ param: { id: videoId } })), [videoId]);
   const job = useJob(video.data?.activeJob?.id, video.reload);
@@ -32,21 +35,5 @@ export default function VideoLayout({ tabs = [] }: { tabs?: { label: string; to:
       {video.error !== undefined && <LoadError error={video.error} retry={video.reload} />}
       <Outlet context={{ video: data, job, reload: video.reload } satisfies VideoContext} />
     </>
-  );
-}
-
-export function VideoOverview() {
-  const { video, job } = useOutletContext<VideoContext>();
-  const status = transcriptStatus(video, job);
-  return (
-    <section className="video-overview" aria-label="Video details">
-      {video.thumbnailUrl && <img src={video.thumbnailUrl} alt="" className="video-cover" />}
-      <div className="panel">
-        <h2>Transcript</h2>
-        <p className={`status ${status.tone === 'ok' ? 'ok' : status.tone === 'problem' ? 'problem' : ''}`} role="status">{status.text}</p>
-        {video.transcriptError && <p className="muted">{video.transcriptError}</p>}
-        <a className="button" href={`https://www.youtube.com/watch?v=${video.youtubeId}`} target="_blank" rel="noreferrer">Open on YouTube</a>
-      </div>
-    </section>
   );
 }

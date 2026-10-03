@@ -8,11 +8,12 @@ TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives i
 
 - Import a YouTube video by link or ID and see its transcript status update automatically.
 - Browse your library; create, rename, and delete topics; assign videos to topics and filter by collection. Deleting a topic keeps its videos.
-- Open a video overview with its metadata and an external YouTube link.
+- Watch beside the transcript; seek from timestamps, follow playback, search passages, and resume from your saved position.
+- Paste a missing transcript or upload WebVTT/SRT captions. Export the transcript as text or Markdown with timestamps.
 - Read configured models, key presence, the data directory, and backup instructions in Settings.
 - Use the desktop interface, including keyboard navigation. The current release is desktop-only.
 
-Watch & Read is the next work package. The reader, notes, chat, and knowledge graph will appear as they are completed.
+Documents and attachments are the next work package. Notes, chat, and the knowledge graph will appear as they are completed.
 
 ## Requirements
 

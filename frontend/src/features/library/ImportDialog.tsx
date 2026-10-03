@@ -60,7 +60,7 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
       const { video } = await unwrap(api.videos.import.$post({ json: { url, topicId } }));
       if (attempt.current !== current) return;
       onClose();
-      navigate(`/videos/${video.id}`);
+      navigate(`/videos/${video.id}/watch`);
     } catch (err) {
       if (attempt.current === current) setError(errorMessage(err));
     } finally {

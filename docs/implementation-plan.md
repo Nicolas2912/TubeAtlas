@@ -93,7 +93,7 @@ Essential server dependencies: hono, @hono/node-server, zod, @hono/zod-validator
 
 Global navigation: **Library**, **Topics**, **All documents**, **Settings**. Topics are user-created collections of videos, not automatic cross-video graph merging.
 
-During WP-04, `/videos/:videoId` is a real overview with saved metadata, topic assignment, transcript job status, and an external YouTube link. Imports and library cards open that overview until WP-05 adds Watch & Read, then switch to `/videos/:videoId/watch`. Video tabs and All documents enter the navigation only when their feature is implemented.
+Imports and library cards open `/videos/:videoId/watch`, with playback beside the transcript. The bare `/videos/:videoId` route redirects there, retaining timestamp parameters. `VideoLayout` keeps the saved identity and topic assignment above the reader. Video tabs and All documents enter the navigation only when their feature is implemented; Watch & Read is the first available tab.
 
 Video routes (added as their milestones land):
 

@@ -6,7 +6,7 @@ import { getCurrentTranscript, saveManualTranscript } from '../services/transcri
 import { getVideo } from '../services/videos.ts';
 import { validate } from '../validate.ts';
 
-export function transcriptRoutes({ db }: AppDeps) {
+export function transcriptRoutes({ db, jobs }: AppDeps) {
   return new Hono()
     .get('/:id/transcript', validate('param', IdParam), (c) => {
       const { id } = c.req.valid('param');
@@ -14,6 +14,12 @@ export function transcriptRoutes({ db }: AppDeps) {
       const transcript = getCurrentTranscript(db, id);
       if (!transcript) throw new AppError(404, 'NO_TRANSCRIPT', 'This video has no transcript yet.');
       return c.json(transcript);
+    })
+    .post('/:id/transcript/retry', validate('param', IdParam), (c) => {
+      const { id } = c.req.valid('param');
+      const video = getVideo(db, id);
+      if (video.transcriptStatus === 'ready') throw new AppError(409, 'TRANSCRIPT_READY', 'This video already has a transcript.');
+      return c.json(jobs.enqueue('transcript', id), 201);
     })
     .post('/:id/transcript', validate('param', IdParam), validate('json', ManualTranscriptBody), (c) => {
       const { id } = c.req.valid('param');
