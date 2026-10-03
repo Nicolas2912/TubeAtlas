@@ -7,7 +7,7 @@ export type { VideoSummary } from '../../server/src/services/videos.ts';
 export type { Topic } from '../../server/src/services/topics.ts';
 export type { Job };
 
-export const api = hc<AppType>('/').api;
+export const api = hc<AppType>('/api');
 
 /** An API failure in the server's error format (or a network failure, code NETWORK). */
 export class ApiError extends Error {
@@ -53,21 +53,23 @@ export function errorMessage(err: unknown): string {
 
 /** Loads data when deps change; keeps the previous data while reloading. */
 export function useApi<T>(load: () => Promise<T>, deps: unknown[]) {
-  const [state, setState] = useState<{ data?: T; error?: unknown; loading: boolean }>({ loading: true });
+  const key = JSON.stringify(deps);
+  const [state, setState] = useState<{ key: string; data?: T; error?: unknown; loading: boolean }>({ key, loading: true });
   const [version, setVersion] = useState(0);
   useEffect(() => {
     let alive = true;
-    setState((s) => ({ ...s, loading: true }));
+    setState((s) => s.key === key ? { ...s, error: undefined, loading: true } : { key, loading: true });
     load().then(
-      (data) => alive && setState({ data, loading: false }),
-      (error: unknown) => alive && setState((s) => ({ data: s.data, error, loading: false })),
+      (data) => alive && setState({ key, data, loading: false }),
+      (error: unknown) => alive && setState((s) => ({ key, data: s.data, error, loading: false })),
     );
     return () => {
       alive = false;
     };
-  }, [...deps, version]);
+  }, [key, version]);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
-  return { ...state, reload };
+  const current = state.key === key;
+  return { data: current ? state.data : undefined, error: current ? state.error : undefined, loading: current ? state.loading : true, reload };
 }
 
 const ACTIVE = new Set(['queued', 'running']);
@@ -78,6 +80,7 @@ export function useJob(jobId: number | null | undefined, onFinish?: (job: Job) =
   const finish = useRef(onFinish);
   finish.current = onFinish;
   useEffect(() => {
+    setJob(null);
     if (!jobId) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;

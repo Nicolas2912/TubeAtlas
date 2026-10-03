@@ -4,6 +4,16 @@ A personal, local-first knowledge hub for YouTube videos: watch a video beside i
 
 TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives in [docs/implementation-plan.md](docs/implementation-plan.md), the knowledge-graph requirements in [docs/knowledge-graph-quality.md](docs/knowledge-graph-quality.md), and the step-by-step work in [docs/work-packages.md](docs/work-packages.md). Progress is recorded in [docs/work-log.md](docs/work-log.md). Features are documented here as they land.
 
+## Available now
+
+- Import a YouTube video by link or ID and see its transcript status update automatically.
+- Browse your library; create, rename, and delete topics; assign videos to topics and filter by collection. Deleting a topic keeps its videos.
+- Open a video overview with its metadata and an external YouTube link.
+- Read configured models, key presence, the data directory, and backup instructions in Settings.
+- Use the interface at desktop or phone width, including keyboard navigation.
+
+Watch & Read is the next work package. The reader, notes, chat, and knowledge graph will appear as they are completed.
+
 ## Requirements
 
 - Node.js 26.10 or newer (see `.nvmrc`). Node runs the server's TypeScript directly; there is no server build step.

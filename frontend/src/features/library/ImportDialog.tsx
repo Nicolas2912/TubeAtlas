@@ -1,21 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMatch, useNavigate } from 'react-router';
-import { api, ApiError, errorMessage, unwrap, type Topic } from '../../api.ts';
+import { api, errorMessage, unwrap, type Topic } from '../../api.ts';
+import { trapDialogFocus } from '../../components/dialog.ts';
+import { ensureTopic } from '../topics/api.ts';
 
 const NEW_TOPIC = 'new';
-
-/** Finds or creates a topic by name (case-insensitive, like the server). */
-export async function ensureTopic(name: string): Promise<Topic> {
-  try {
-    return await unwrap(api.topics.$post({ json: { name } }));
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.code !== 'TOPIC_EXISTS') throw err;
-    const topics = await unwrap(api.topics.$get());
-    const existing = topics.find((t) => t.name.toLowerCase() === name.trim().toLowerCase());
-    if (!existing) throw err;
-    return existing;
-  }
-}
 
 export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -27,6 +16,9 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [newTopic, setNewTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+  const attempt = useRef(0);
 
   useEffect(() => {
     const el = dialog.current;
@@ -35,10 +27,19 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
       setUrl('');
       setNewTopic('');
       setError(null);
+      setBusy(false);
+      setTopics([]);
+      setTopicsError(null);
+      setTopicsLoading(true);
       setTopicChoice(topicRoute?.params.topicId ?? '');
       el.showModal();
-      unwrap(api.topics.$get()).then(setTopics, () => setTopics([]));
+      const current = ++attempt.current;
+      unwrap(api.topics.$get()).then(
+        (loaded) => { if (attempt.current === current) { setTopics(loaded); setTopicsLoading(false); } },
+        (err) => { if (attempt.current === current) { setTopicsError(errorMessage(err)); setTopicsLoading(false); } },
+      );
     } else if (!open && el.open) {
+      attempt.current++;
       el.close();
     }
   }, [open, topicRoute?.params.topicId]);
@@ -47,6 +48,7 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
     event.preventDefault();
     setBusy(true);
     setError(null);
+    const current = attempt.current;
     try {
       let topicId: number | undefined;
       if (topicChoice === NEW_TOPIC) {
@@ -56,17 +58,18 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
         topicId = Number(topicChoice);
       }
       const { video } = await unwrap(api.videos.import.$post({ json: { url, topicId } }));
+      if (attempt.current !== current) return;
       onClose();
-      navigate(`/videos/${video.id}/watch`);
+      navigate(`/videos/${video.id}`);
     } catch (err) {
-      setError(errorMessage(err));
+      if (attempt.current === current) setError(errorMessage(err));
     } finally {
-      setBusy(false);
+      if (attempt.current === current) setBusy(false);
     }
   }
 
   return (
-    <dialog ref={dialog} onClose={onClose} aria-labelledby="import-title">
+    <dialog ref={dialog} onKeyDown={trapDialogFocus} onClose={() => { attempt.current++; onClose(); }} aria-labelledby="import-title">
       <h2 id="import-title">Import video</h2>
       <form className="form" onSubmit={submit}>
         <div className="field">
@@ -80,13 +83,14 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
+            disabled={busy}
             autoFocus
             aria-describedby={error ? 'import-error' : undefined}
           />
         </div>
         <div className="field">
           <label htmlFor="import-topic">Topic (optional)</label>
-          <select id="import-topic" className="input" value={topicChoice} onChange={(e) => setTopicChoice(e.target.value)}>
+          <select id="import-topic" className="input" value={topicChoice} disabled={busy || topicsLoading || topicsError !== null} onChange={(e) => setTopicChoice(e.target.value)}>
             <option value="">No topic</option>
             {topics.map((t) => (
               <option key={t.id} value={t.id}>
@@ -99,9 +103,11 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {topicChoice === NEW_TOPIC && (
           <div className="field">
             <label htmlFor="import-new-topic">New topic name</label>
-            <input id="import-new-topic" className="input" value={newTopic} maxLength={80} onChange={(e) => setNewTopic(e.target.value)} />
+            <input id="import-new-topic" className="input" value={newTopic} maxLength={80} disabled={busy} required onChange={(e) => setNewTopic(e.target.value)} />
           </div>
         )}
+        {topicsLoading && <p className="muted" role="status">Loading topics…</p>}
+        {topicsError && <p className="error" role="alert">Could not load topics. {topicsError} Close and reopen this dialog to try again.</p>}
         {error && (
           <p id="import-error" className="error" role="alert">
             {error}
@@ -111,7 +117,7 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
           <button type="button" className="button" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="button primary" disabled={busy}>
+          <button type="submit" className="button primary" disabled={busy || topicsLoading || (topicsError !== null && topicChoice !== '')}>
             {busy ? 'Importing…' : 'Import'}
           </button>
         </div>

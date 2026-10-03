@@ -6,7 +6,7 @@ import { transcriptStatus } from './status.ts';
 function VideoCard({ video, onChanged }: { video: VideoSummary; onChanged: () => void }) {
   const job = useJob(video.activeJob?.id, onChanged);
   const status = transcriptStatus(video, job);
-  const href = `/videos/${video.id}/watch`;
+  const href = `/videos/${video.id}`;
   return (
     <article className="video-card">
       <Link to={href} className="thumb" tabIndex={-1} aria-hidden="true">

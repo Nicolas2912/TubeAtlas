@@ -1,10 +1,10 @@
 # TubeAtlas work packages
 
-Status: execution plan, written September 26, 2026. It breaks the [implementation plan](implementation-plan.md) and the [KG quality specification](knowledge-graph-quality.md) into work packages (WPs) that an implementing agent completes one at a time, in order.
+Status: execution plan, written September 26, 2026; progress reviewed October 3, 2026. It breaks the [implementation plan](implementation-plan.md) and the [KG quality specification](knowledge-graph-quality.md) into work packages (WPs) that an implementing agent completes one at a time, in order.
 
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
-- Nothing here has been implemented yet.
+- WP-00 through WP-04 are complete. WP-05 through WP-14 have not started. Next: WP-05 (Watch & Read). See the overview in §5 and the work log for verification evidence.
 
 ## 1. Rules for the implementing agent
 
@@ -144,7 +144,7 @@ Overview (→ = depends on):
 | 01 | Database, config, server shell | 00 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-01-database-config-server-shell-2026-09-27)) |
 | 02 | OpenRouter adapter and provider check | 01 | 0 | **Done** 2026-09-27 ([log](work-log.md#wp-02-openrouter-adapter-and-provider-check-2026-09-27)) |
 | 03 | YouTube import, transcripts, job runner | 01 | 0–1 | **Done** 2026-09-27 ([log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27)) |
-| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | Not started |
+| 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-04-frontend-shell-library-topics-settings-2026-10-03)) |
 | 05 | Watch & Read | 04 | 1 | Not started |
 | 06 | Documents and attachments | 05 | 2 | Not started |
 | 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
@@ -546,6 +546,8 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 ### WP-04: Frontend shell, Library, Topics, Settings
 
+**Status:** done on 2026-10-03; completes the partial implementation merged on 2026-09-27 (`34beadb`, merge `ab13710`). Verification evidence is in the [work log](work-log.md#wp-04-frontend-shell-library-topics-settings-2026-10-03).
+
 **Goal:** the real application shell from the designs, with a working library: import a video, watch its job progress, organize it into topics, and open it.
 
 **Scope.**
@@ -559,15 +561,15 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `/documents` → All documents (WP-13)
   - `/search` → Search (WP-13)
   - `/settings`
-  - `/videos/:id` → redirect to `watch`
-  - `/videos/:id/watch`, `/graph`, `/chat/:conversationId?`, `/documents/:documentId?`
+  - `/videos/:videoId` → a real video overview in WP-04; redirect to `watch` when WP-05 lands
+  - Add `/videos/:videoId/watch`, `/graph`, `/chat/:conversationId?`, `/documents/:documentId?` only as their WPs land
 
   Each view is lazy-loaded with `React.lazy`. Tabs whose WP isn't done yet aren't rendered.
 - **Shell:**
-  - 190 px sidebar: logo "TubeAtlas", Library, Topics, All documents, and Settings at the bottom.
+  - 190 px sidebar: logo "TubeAtlas", Library, Topics, and Settings at the bottom. All documents is added in WP-13.
   - Top bar with the search box (disabled until WP-13) and an "Import video" button.
   - Main outlet. Below 900 px width the sidebar collapses to a menu button.
-- **Import dialog:** a URL field and an optional topic select or new topic. Submitting calls `POST /api/videos/import`, then navigates to `/videos/:id/watch`. Errors are shown inline with their message.
+- **Import dialog:** a URL field and an optional topic select or new topic. Submitting calls `POST /api/videos/import`, then navigates to `/videos/:videoId`. WP-05 switches that destination to `/videos/:videoId/watch`. Errors are shown inline with their message.
 - **Library:**
   - A grid or list of videos: thumbnail, title, channel, duration, topic chips, and transcript status as text (`Ready`, `Fetching transcript…`, `No captions`, `Blocked by YouTube`, `Failed`).
   - Active jobs show their stage via `useJob`.
@@ -577,20 +579,30 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - Breadcrumb `<first topic or "Library"> / <title>`, a serif title, and `· <duration>`.
   - Tabs in design order, without Visual Studio: Watch & Read, Knowledge Graph, Chat, Documents.
   - The active tab is shown in accent with an underline. Tabs are links with `aria-current`.
-- **Settings:** read-only list of key presence (not values), configured models, data directory, and the backup instructions. Data comes from `/api/health` plus a small `GET /api/settings` returning models and data dir.
+- **Settings:** read-only list of key presence (not values), configured models, data directory, and the backup instructions. `GET /api/settings` returns these values together; `/api/health` remains available for health checks.
 - **`Markdown.tsx`:** `react-markdown` with raw HTML disabled (the default). Links starting with `/` render as router `<Link>`s; external links get `target=_blank rel=noreferrer`.
 
 **Acceptance criteria.**
-- [ ] In a real browser at desktop (1440×900) and narrow (390×844) widths:
+- [x] In a real browser at desktop (1440×900) and narrow (390×844) widths:
   - import `jGD_UR4wMJc` from the dialog;
   - see "Fetching transcript…" change to "Ready" without reloading;
   - assign a topic;
   - filter by topic;
   - reload;
   - everything persists.
-- [ ] An invalid URL and an unknown video ID each show an inline error.
-- [ ] Keyboard only: every control is reachable with visible focus, and the dialog traps focus and closes on Esc.
-- [ ] A screenshot of the shell compared side by side with `06-watch-and-read.png` shows the same shell proportions, colors, and tab styling, and the comparison is noted in the work log.
+- [x] An invalid URL and an unknown video ID each show an inline error.
+- [x] Keyboard only: every control is reachable with visible focus, and the dialog traps focus and closes on Esc.
+- [x] A screenshot of the shell compared side by side with `06-watch-and-read.png` shows the same shell proportions and colors, and the comparison is noted in the work log. Shared tab styles use the reference’s accent and 2 px underline; unfinished tabs remain hidden per rule 7.
+
+**As built** (what later WPs need to know):
+
+- `app/App.tsx` owns the router and lazy views; `main.tsx` only mounts React and imports the shared styles. This keeps routing updates from creating a second React root during development.
+- The typed client is `hc<AppType>('/api')`: `AppType` already describes the API sub-app. Do not append `.api` to this client.
+- Library, import, topic management, topic filtering, and read-only Settings use the real API. `useApi` retains data for a same-query reload and hides results from a different query; `useJob` polls active jobs every 2 s and reloads the video when they finish.
+- `/videos/:videoId` has a nested index overview with metadata, topic assignment, live transcript status, and an external YouTube link. `VideoLayout` provides the header, breadcrumb, conditional tabs, and an outlet whose `VideoContext` is `{ video, job, reload }`.
+- WP-05 adds the Watch & Read child route and its tab, then changes import/card destinations to `/videos/:videoId/watch` and redirects the bare video route there. The existing overview is functional, not a placeholder reader. Other tabs and All documents stay hidden until implemented; global search remains disabled until WP-13.
+- Import and mobile navigation use native modal dialogs with explicit Tab/Shift+Tab wrapping, Escape closing, and focus restoration. The primary button uses `--accent-ink` for readable white text.
+- `server/src/routes/frontend-client.test.ts` exercises the actual frontend client against the server for API paths, imports, jobs, topics, filtering, settings, and error messages; its transcript text is invented.
 
 ---
 
