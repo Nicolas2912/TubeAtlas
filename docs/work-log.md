@@ -147,6 +147,8 @@ One section per work package from [work-packages.md](work-packages.md): what was
 
 ## WP-04: Frontend shell, Library, Topics, Settings (2026-10-03)
 
+This entry records the original implementation and verification. Mobile support and the associated acceptance requirements were subsequently removed at the user's request; see the desktop-only follow-up below.
+
 **Done**
 - Connected React Router, lazy views, and the shared styles to the application entry point. Completed the desktop shell, mobile menu, library, import dialog, topic management and filtering, Settings, and video overview.
 - Corrected the typed API client: `AppType` is already the API sub-app, so the client uses `/api` directly. Added three tests that exercise the frontend client against the actual server, including imports, jobs, topic assignment/filtering/rename/delete, settings, API errors, and connection errors.
@@ -173,3 +175,16 @@ One section per work package from [work-packages.md](work-packages.md): what was
 - Routing and lazy components live in `app/App.tsx`, separate from the React mount in `main.tsx`; the topic helper is separate from `ImportDialog.tsx`. This fixes the duplicate-root/DOM-removal errors encountered during development updates. The 404 route also supplies its error view and an initial loading fallback.
 - The configured YouTube key was rejected during the live check, and metadata correctly fell back to oEmbed; duration was therefore unknown. Settings reports key presence, not provider validation. No OpenRouter calls were made and AI spend was **$0**.
 - The commit was initially blocked by a generated Python `pre-commit` hook left in `.git/hooks/`, referencing the configuration removed in WP-00. After confirming that no current pre-commit configuration exists, retained it as `.git/hooks/pre-commit.legacy-python` and removed the obsolete hook from the active path. The project’s current typechecks, build, and tests had already passed.
+
+## WP-04 follow-up: Desktop-only interface (2026-10-03)
+
+**Done**
+- At the user's request, removed the mobile menu, duplicated navigation, viewport listeners, menu icon, and mobile layout breakpoints. The desktop sidebar and pane layouts remain in place. Dialog and topic-picker widths are fixed for desktop use.
+- Updated README, the implementation plan, and WP-04/WP-05/WP-13 instructions and acceptance criteria to desktop-only scope. Mobile layouts and phone-width testing require a future user request. The preceding work-log entry remains a historical record of the original verification.
+
+**Verification**
+- `npm run check` passes both typechecks and the production build; `npm test` passes **67/67 tests**. `git diff --check` passes. No dependencies or tests were added for this UI removal.
+- Served the production build with `npm start` using the existing temporary WP-04 data directory. T3 preview inspection explicitly reported no automation host, so used `agent-browser --session tubeatlas-desktop` as the browser fallback.
+- Checked Library, Topics, Settings, and the video overview only at **1440×900**. Clicked through desktop navigation, inspected screenshots, and confirmed one main navigation, the visible 190 px sidebar and search box, no mobile menu, no CSS media rules, and no horizontal overflow. Topics, Settings, and the video overview retain their desktop columns.
+- The import dialog opens at 480 px; Shift+Tab wraps from the URL field to Import, Tab wraps back, and Escape closes it and restores focus to Import video. The topic picker opens at 340 px within the viewport, shows the saved topic assignments, and closes with Escape.
+- The video overview's axe check reported **zero violations**. Browser errors and console output were empty. Screenshots are `/tmp/tubeatlas-desktop-only-{library,topics,settings,video}.png`. Closed the test browser and stopped the server afterwards.

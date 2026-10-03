@@ -10,7 +10,7 @@ TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives i
 - Browse your library; create, rename, and delete topics; assign videos to topics and filter by collection. Deleting a topic keeps its videos.
 - Open a video overview with its metadata and an external YouTube link.
 - Read configured models, key presence, the data directory, and backup instructions in Settings.
-- Use the interface at desktop or phone width, including keyboard navigation.
+- Use the desktop interface, including keyboard navigation. The current release is desktop-only.
 
 Watch & Read is the next work package. The reader, notes, chat, and knowledge graph will appear as they are completed.
 

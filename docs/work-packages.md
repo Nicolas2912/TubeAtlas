@@ -5,6 +5,7 @@ Status: execution plan, written September 26, 2026; progress reviewed October 3,
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
 - WP-00 through WP-04 are complete. WP-05 through WP-14 have not started. Next: WP-05 (Watch & Read). See the overview in §5 and the work log for verification evidence.
+- The current release is desktop-only. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 
 ## 1. Rules for the implementing agent
 
@@ -568,7 +569,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **Shell:**
   - 190 px sidebar: logo "TubeAtlas", Library, Topics, and Settings at the bottom. All documents is added in WP-13.
   - Top bar with the search box (disabled until WP-13) and an "Import video" button.
-  - Main outlet. Below 900 px width the sidebar collapses to a menu button.
+  - Main outlet with the desktop sidebar always visible.
 - **Import dialog:** a URL field and an optional topic select or new topic. Submitting calls `POST /api/videos/import`, then navigates to `/videos/:videoId`. WP-05 switches that destination to `/videos/:videoId/watch`. Errors are shown inline with their message.
 - **Library:**
   - A grid or list of videos: thumbnail, title, channel, duration, topic chips, and transcript status as text (`Ready`, `Fetching transcript…`, `No captions`, `Blocked by YouTube`, `Failed`).
@@ -583,7 +584,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **`Markdown.tsx`:** `react-markdown` with raw HTML disabled (the default). Links starting with `/` render as router `<Link>`s; external links get `target=_blank rel=noreferrer`.
 
 **Acceptance criteria.**
-- [x] In a real browser at desktop (1440×900) and narrow (390×844) widths:
+- [x] In a real browser at desktop width (1440×900):
   - import `jGD_UR4wMJc` from the dialog;
   - see "Fetching transcript…" change to "Ready" without reloading;
   - assign a topic;
@@ -601,7 +602,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - Library, import, topic management, topic filtering, and read-only Settings use the real API. `useApi` retains data for a same-query reload and hides results from a different query; `useJob` polls active jobs every 2 s and reloads the video when they finish.
 - `/videos/:videoId` has a nested index overview with metadata, topic assignment, live transcript status, and an external YouTube link. `VideoLayout` provides the header, breadcrumb, conditional tabs, and an outlet whose `VideoContext` is `{ video, job, reload }`.
 - WP-05 adds the Watch & Read child route and its tab, then changes import/card destinations to `/videos/:videoId/watch` and redirects the bare video route there. The existing overview is functional, not a placeholder reader. Other tabs and All documents stay hidden until implemented; global search remains disabled until WP-13.
-- Import and mobile navigation use native modal dialogs with explicit Tab/Shift+Tab wrapping, Escape closing, and focus restoration. The primary button uses `--accent-ink` for readable white text.
+- The desktop sidebar stays visible; there is no mobile menu or layout breakpoint. The import dialog uses a native modal dialog with explicit Tab/Shift+Tab wrapping, Escape closing, and focus restoration. The primary button uses `--accent-ink` for readable white text.
 - `server/src/routes/frontend-client.test.ts` exercises the actual frontend client against the server for API paths, imports, jobs, topics, filtering, settings, and error messages; its transcript text is invented.
 
 ---
@@ -636,7 +637,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - [ ] The German video's transcript displays umlauts correctly, and search "ki" finds "KI".
 - [ ] The 2 h 40 min video: initial render and search stay responsive (measured and recorded).
 - [ ] A video with no captions (simulate by pasting text into a new import whose transcript failed, or use the fake adapter in dev) shows the paste/upload fallback, and after pasting, the text appears without timestamps.
-- [ ] Narrow width: the player sits above the transcript, and both are usable.
+- [ ] Desktop width (1440×900): the player sits beside the transcript, and both are usable.
 
 ---
 
@@ -1004,10 +1005,10 @@ Rules:
 
 ### WP-13: Search, All documents, polish, release
 
-**Goal:** the whole learning journey works end to end, with global search, all-documents browsing, accessible narrow layouts, and a clean Node-only repository.
+**Goal:** the whole learning journey works end to end, with global search, all-documents browsing, accessible desktop layouts, and a clean Node-only repository.
 
 **Scope.**
-- In: FTS5 search, the All documents page, finishing touches on Topics and Library, accessibility and narrow-screen passes, README, the smoke journey, and the final cleanup.
+- In: FTS5 search, the All documents page, finishing touches on Topics and Library, desktop accessibility checks, README, the smoke journey, and the final cleanup.
 - Out: Visual Studio.
 
 **Implementation details.**
@@ -1027,16 +1028,16 @@ Rules:
 - **Polish:**
   - A consistent empty, loading, and error state in every view;
   - page titles (`document.title`);
-  - a narrow-layout pass for all views;
+  - a desktop-layout pass for all views;
   - visible focus everywhere;
   - `prefers-reduced-motion` respected.
-- **Smoke journey:** run and record with the browser automation available: import the English video → wait for the transcript → ask a question → click a citation → save the answer to a note → open the graph (generate if missing) → open an evidence quote → reload → everything is still there. Repeat on a narrow viewport.
+- **Smoke journey:** run and record at desktop width (1440×900) with the browser automation available: import the English video → wait for the transcript → ask a question → click a citation → save the answer to a note → open the graph (generate if missing) → open an evidence quote → reload → everything is still there.
 - **Performance script** `scripts/perf.ts`: seed a temp DB with 100 videos, 1,000 documents, and a 100-node graph, then time list/search/save calls (p95) through `app.request`. Record the machine and results in the work log. The target is < 300 ms p95.
 - **Cleanup:** verify there's no unused dependency (each one in §3.2 is imported somewhere); remove dev-only placeholders; make the README complete (features, setup, scripts, configuration, evaluation, backup).
 
 **Acceptance criteria.**
 - [ ] Search tests cover: German words with umlauts match without diacritics ("uber" finds "über"); a replaced transcript's old text no longer matches; deleted documents disappear; FTS syntax characters in queries can't cause errors.
-- [ ] The smoke journey passes at both widths (recorded).
+- [ ] The smoke journey passes at desktop width (1440×900), with evidence recorded.
 - [ ] The performance script results meet the target, or the misses are explained.
 - [ ] A fresh clone with `npm ci && npm run check && npm test && npm run build && npm start` works on Node 26.10+.
 - [ ] Every milestone "done when" criterion in the implementation plan §9 (milestones 0–5) is ticked in the work log with a pointer to its evidence.

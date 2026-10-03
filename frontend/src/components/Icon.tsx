@@ -5,7 +5,6 @@ const paths = {
   topic: 'M3 12.2V4.5A1.5 1.5 0 0 1 4.5 3h7.7l8.8 8.8-9.2 9.2z M7.5 7.5h.01',
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1L11 21h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z',
   plus: 'M12 5v14 M5 12h14',
-  menu: 'M4 7h16 M4 12h16 M4 17h16',
 } as const;
 
 export function Icon({ name, size = 18 }: { name: keyof typeof paths; size?: number }) {

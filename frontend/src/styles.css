@@ -23,7 +23,6 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(-
 h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
 a { color: inherit; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---- controls ---- */
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -57,20 +56,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .navigation .spacer { flex: 1; }
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 10px 24px; border-bottom: 1px solid var(--line); min-height: 57px; }
-.menu-button { display: none; margin-right: auto; }
 .global-search { max-width: 600px; margin-right: auto; background: #fcfaf7; }
 .skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; transform: translateY(-150%); background: var(--surface); padding: 8px 12px; }
 .skip-link:focus { transform: none; }
 .content { padding: 20px 24px 40px; flex: 1; }
-
-@media (max-width: 900px) {
-  .shell { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
-  .global-search { display: none; }
-  .menu-button { display: inline-flex; }
-  .topbar, .content { padding-left: 16px; padding-right: 16px; }
-}
-@media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
 
 /* ---- pages ---- */
 .page-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -113,17 +102,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tab[aria-current='page'] { color: var(--accent-ink); border-bottom-color: var(--accent); font-weight: 600; }
 
 /* ---- dialog and popover ---- */
-dialog { border: 1px solid var(--line); border-radius: 12px; padding: 22px; width: min(480px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); }
+dialog { border: 1px solid var(--line); border-radius: 12px; padding: 22px; width: 480px; background: var(--surface); color: var(--ink); }
 dialog::backdrop { background: rgba(30, 26, 22, 0.35); }
 dialog h2 { font-size: 22px; margin-bottom: 14px; }
 .form { display: grid; gap: 14px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 [popover] { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); min-width: 220px; }
-[popover] { width: min(340px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
-.mobile-menu { margin: 0; height: 100dvh; max-height: 100dvh; width: min(280px, calc(100vw - 40px)); border-radius: 0; padding: 18px 10px; }
-.mobile-menu[open] { display: flex; flex-direction: column; }
-.mobile-menu .navigation { flex: 1; }
-.mobile-menu form { margin-bottom: 20px; }
+[popover] { width: 340px; max-height: calc(100vh - 32px); overflow-y: auto; }
 .checklist { display: grid; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
 .checklist label { display: flex; gap: 8px; align-items: center; }
 
@@ -137,18 +122,12 @@ dialog h2 { font-size: 22px; margin-bottom: 14px; }
 .topic-list a.active { background: var(--accent-soft); }
 .inline-form { display: flex; gap: 6px; flex-wrap: wrap; }
 .inline-form .input { flex: 1; min-width: 120px; }
-@media (max-width: 900px) { .split, .video-overview { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---- settings ---- */
 .settings { display: grid; grid-template-columns: max-content 1fr; gap: 10px 24px; max-width: 760px; margin: 0; }
 .settings dt { color: var(--muted); }
 .settings dd { margin: 0; overflow-wrap: anywhere; }
 .settings-panel { max-width: 800px; margin-bottom: 20px; }
-@media (max-width: 600px) {
-  .settings { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .settings dd { margin-bottom: 12px; }
-  .video-title h1 { font-size: 28px; }
-}
 code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.92em; background: #f1ebe2; padding: 1px 5px; border-radius: 4px; }
 
 /* ---- markdown ---- */

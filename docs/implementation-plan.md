@@ -1,12 +1,12 @@
 # TubeAtlas implementation plan
 
-Status: implementation specification, updated September 26, 2026. The target application is entirely TypeScript/Node.js; Python/FastAPI are not part of its runtime, tooling, or deployment. This update changes the plan, not the existing application code. [Knowledge-graph extraction and evaluation requirements](knowledge-graph-quality.md) are a required part of this plan.
+Status: implementation specification, updated October 3, 2026. The target application is entirely TypeScript/Node.js; Python/FastAPI are not part of its runtime, tooling, or deployment. [Knowledge-graph extraction and evaluation requirements](knowledge-graph-quality.md) are a required part of this plan.
 
 ## 1. Product and scope
 
 Build a personal knowledge hub where a YouTube video becomes a durable workspace: watch, read, explore concepts, ask questions, and keep useful documents. Generating explanatory images (Visual Studio) is an optional later milestone, not part of the first release.
 
-The first release is single-user, local-first, desktop-first, and served on localhost. AI and YouTube still require internet access; stored notes, transcripts, and graphs remain readable without it. Public hosting, accounts, teams, synchronization, and large channel ingestion are separate future decisions. This narrower release scope supersedes the original PRD's large-scale channel-processing targets.
+The first release is single-user, local-first, desktop-only, and served on localhost. AI and YouTube still require internet access; stored notes, transcripts, and graphs remain readable without it. Public hosting, accounts, teams, synchronization, and large channel ingestion are separate future decisions. This narrower release scope supersedes the original PRD's large-scale channel-processing targets.
 
 Because there is exactly one user on one machine, prefer simple behavior over distributed-systems safeguards: no idempotency keys, revision conflicts, stream resumption, or backup tooling. The exception is paid AI calls, which are never replayed automatically.
 
@@ -113,7 +113,7 @@ Shared behavior:
 - Lazy-load each view, particularly the graph. Use Hono's typed client plus small feature hooks, and fetch for streams; no global state manager or general-purpose caching framework initially.
 - Show precise empty, loading, error, and retry states. A missing transcript should not prevent managing notes or attachments.
 - Use keyboard-accessible controls, visible focus, readable contrast, and text labels alongside colours. Graph nodes contain only labels and colours.
-- On narrow screens, collapse the sidebar and stack the current view's panes; retain all tabs. Do not implement a separate mobile application.
+- Keep the desktop sidebar and pane layouts. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 - Do not generate paid AI output merely because someone visits a tab.
 - Disable an action's button while its request or job is pending.
 
@@ -256,7 +256,7 @@ Each milestone is a small usable feature slice, including its frontend, API, per
 | 2. Documents | Markdown editor/preview; autosave; attachments; local asset storage; document list, export, and source links. | A note and attachment survive reload; a failed save keeps the text and says so; a saved passage seeks correctly. |
 | 3. Grounded chat | Direct OpenRouter integration; conversations; streaming; scoped retrieval for long transcripts; validated citations; save-to-document. | Ask a real question, follow its source, save the answer, reload the conversation, and handle insufficient evidence. |
 | 4. Knowledge Graph | Astra-low prompt and processing pipeline; schema/evidence checks; Cytoscape view; label-only nodes; inspector; persisted layout; mandatory transcript-based quality review on the two gated videos plus a report-only run on the long video. | Graphs persist and source navigation works; the implementing agent produces the required evaluation report, meets the accuracy gates, and **the user confirms the spot-check sample** (see the quality specification). Rendering or passing schema checks alone is not completion. |
-| 5. Complete the hub | Topic/library polish; global text search; all-documents filters; keyboard and narrow-screen behavior; remove superseded dependencies and routes; README backup note. | A user completes the whole learning journey with no fixture data or successful placeholder operations. |
+| 5. Complete the hub | Topic/library polish; global text search; all-documents filters; desktop keyboard and accessibility checks; remove superseded dependencies and routes; README backup note. | A user completes the whole learning journey with no fixture data or successful placeholder operations. |
 | 6. Visual Studio (optional, later) | Capability-aware image API; generation and supported refinement; local history; large preview; image insertion into docs; fifth tab. Starts with the opt-in image spike. | Generate an actual image, navigate away during the job, reopen it, refine when supported, and insert it into a document. |
 
 Milestone 6 isn't scheduled; pick it up only when you ask for it. It doesn't block the first release.
@@ -276,7 +276,7 @@ Automate only the important contracts:
 5. Provider adapters parse representative chat and embedding success/error responses.
 6. KG-specific regression cases cover negation, conditional claims, causality, entity identity, speaker turns, transcript languages, and caption time units. Use the real transcripts for the required semantic evaluation described below, not a sprawling synthetic benchmark.
 
-One browser smoke journey covers import fixture → transcript → chat citation → save note → graph passage → reload. Use browser automation available during development; introduce a persistent browser-test dependency only if this journey must run in CI. Inspect all views at desktop and narrow widths, including focus and error states. No screenshot snapshots for every component.
+One browser smoke journey covers import fixture → transcript → chat citation → save note → graph passage → reload. Use browser automation available during development; introduce a persistent browser-test dependency only if this journey must run in CI. Inspect all views at desktop width (1440×900), including focus and error states. No screenshot snapshots for every component.
 
 Keep live provider checks opt-in and tiny; never spend API credit in normal CI. Successful connectivity is not proof of correct retrieval, captions, or grounded answers. Run lint/typecheck/frontend build and focused backend checks on each milestone, with the full retained suite before integrating it.
 
