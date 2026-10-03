@@ -13,6 +13,8 @@ import { jobRoutes } from './routes/jobs.ts';
 import { topicRoutes } from './routes/topics.ts';
 import { transcriptRoutes } from './routes/transcripts.ts';
 import { videoRoutes } from './routes/videos.ts';
+import { documentRoutes, videoDocumentRoutes } from './routes/documents.ts';
+import { assetRoutes, videoAssetRoutes } from './routes/assets.ts';
 import { DEV_WEB_PORT } from '../../shared/ports.ts';
 
 export type AppDeps = { db: Db; config: Config; youtube: YouTube; jobs: JobRunner };
@@ -47,6 +49,9 @@ function bodyLimits(): MiddlewareHandler {
   const standard = limit(MB);
   const large: [method: string, path: RegExp, handler: MiddlewareHandler][] = [
     ['POST', /^\/api\/videos\/\d+\/transcript$/, limit(MAX_MANUAL_TRANSCRIPT_BYTES)],
+    ['POST', /^\/api\/videos\/\d+\/assets$/, limit(25 * MB)],
+    ['POST', /^\/api\/videos\/\d+\/documents$/, limit(25 * MB)],
+    ['PATCH', /^\/api\/documents\/\d+$/, limit(25 * MB)],
   ];
   return (c, next) => {
     const match = large.find(([method, path]) => c.req.method === method && path.test(c.req.path));
@@ -71,6 +76,10 @@ export function createApp(deps: AppDeps) {
     )
     .route('/videos', videoRoutes(deps))
     .route('/videos', transcriptRoutes(deps))
+    .route('/videos', videoDocumentRoutes(deps))
+    .route('/videos', videoAssetRoutes(deps))
+    .route('/documents', documentRoutes(deps))
+    .route('/assets', assetRoutes(deps))
     .route('/topics', topicRoutes(deps))
     .route('/jobs', jobRoutes(deps));
   api.onError(handleError);

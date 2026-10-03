@@ -30,3 +30,18 @@ export const TopicBody = z.strictObject({ name: z.string().trim().min(1).max(80)
 export const VideoListQuery = z.object({ topicId: z.coerce.number().int().positive().optional() });
 
 export const IdParam = z.object({ id: z.coerce.number().int().positive() });
+
+const TextKind = z.enum(['note', 'summary', 'study_guide', 'qa']);
+const DocumentTitle = z.string().trim().min(1).max(200);
+export const CreateDocumentBody = z.strictObject({
+  title: DocumentTitle,
+  kind: TextKind.default('note'),
+  markdown: z.string().default(''),
+});
+export const UpdateDocumentBody = z.strictObject({
+  title: DocumentTitle.optional(),
+  kind: TextKind.optional(),
+  markdown: z.string().optional(),
+  appendMarkdown: z.string().min(1).optional(),
+}).refine((body) => Object.keys(body).length > 0, 'Provide a document change.')
+  .refine((body) => body.markdown === undefined || body.appendMarkdown === undefined, 'Replace or append Markdown, not both.');

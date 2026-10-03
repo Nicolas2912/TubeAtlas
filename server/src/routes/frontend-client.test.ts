@@ -27,6 +27,13 @@ test('the frontend client reaches the API sub-app, including topics, filtering, 
   assert.equal(transcript.segments[0]!.start, 0);
   await unwrap(api.videos[':id'].$patch({ param: { id: String(video.id) }, json: { playbackSeconds: 42.5 } }));
   assert.equal((await unwrap(api.videos[':id'].$get({ param: { id: String(video.id) } }))).playbackSeconds, 42.5);
+  const note = await unwrap(api.videos[':id'].documents.$post({ param: { id: String(video.id) }, json: { title: 'Paper notes' } }));
+  await unwrap(api.documents[':id'].$patch({ param: { id: String(note.id) }, json: { markdown: 'Fold once.' } }));
+  await unwrap(api.documents[':id'].$patch({ param: { id: String(note.id) }, json: { appendMarkdown: 'Keep corners even.' } }));
+  assert.equal((await unwrap(api.documents[':id'].$get({ param: { id: String(note.id) } }))).markdown, 'Fold once.\n\nKeep corners even.');
+  const uploaded = await unwrap(api.videos[':id'].assets.$post({ param: { id: String(video.id) }, form: { file: new File(['Paper notes.'], 'notes.txt') } }));
+  assert.equal(uploaded.kind, 'note');
+  assert.equal((await unwrap(api.videos[':id'].documents.$get({ param: { id: String(video.id) } }))).length, 2);
   await unwrap(api.videos[':id'].$patch({ param: { id: String(video.id) }, json: { topicIds: [topic.id] } }));
   const filtered = await unwrap(api.videos.$get({ query: { topicId: String(topic.id) } }));
   assert.deepEqual(filtered.map((v) => v.id), [video.id]);

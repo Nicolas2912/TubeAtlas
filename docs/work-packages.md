@@ -4,7 +4,7 @@ Status: execution plan, written September 26, 2026; progress reviewed October 3,
 
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
-- WP-00 through WP-05 are complete. WP-06 through WP-14 have not started. Next: WP-06 (Documents and attachments). See the overview in §5 and the work log for verification evidence.
+- WP-00 through WP-06 are complete. WP-07 through WP-14 have not started. Next: WP-07 (Evidence units and retrieval). See the overview in §5 and the work log for verification evidence.
 - The current release is desktop-only. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 
 ## 1. Rules for the implementing agent
@@ -147,7 +147,7 @@ Overview (→ = depends on):
 | 03 | YouTube import, transcripts, job runner | 01 | 0–1 | **Done** 2026-09-27 ([log](work-log.md#wp-03-youtube-import-transcripts-job-runner-2026-09-27)) |
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-04-frontend-shell-library-topics-settings-2026-10-03)) |
 | 05 | Watch & Read | 04 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-05-watch--read-2026-10-03)) |
-| 06 | Documents and attachments | 05 | 2 | Not started |
+| 06 | Documents and attachments | 05 | 2 | **Done** 2026-10-03 ([log](work-log.md#wp-06-documents-and-attachments-2026-10-03)) |
 | 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
 | 08 | Chat | 06, 07 | 3 | Not started |
 | 09 | KG evaluation references (no model runs) | 07 | 4 | Not started |
@@ -393,7 +393,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 **As built** (what later WPs need to know):
 - `createApp({ db, config })` returns `{ app, api }`; `AppType` is the type of `api`. Add feature routes by **chaining** on `api` in `createApp` (the chain is what gives the typed client its types), or mount route modules with `api.route(...)`. Later WPs extend `AppDeps` with `youtube`, `openrouter`, etc.
 - Unknown `/api` paths: the root app's `notFound` returns the JSON `404 NOT_FOUND`; the static and SPA handlers call `next()` for `/api` paths, so routes can't be shadowed by the frontend fallback.
-- ~~The 1 MB `bodyLimit` is applied to the whole `api` sub-app.~~ Changed in WP-03: `bodyLimits()` in `app.ts` applies 1 MB by default and a per-route limit from its `large` list (manual transcripts: 5 MB). WP-06 adds its upload route (25 MB) to that list.
+- `bodyLimits()` in `app.ts` applies 1 MB by default, 5 MB for manual transcripts, and 25 MB for file uploads and document create/update requests. The limit includes the request envelope. Document writes need the larger limit so an imported text note can be edited; accumulated Markdown is also capped at 25 MB of UTF-8.
 - `server/src/testing.ts` provides `createTestApp(env?)`: a real app on a fresh temp `DATA_DIR`, with `request(path, init)` sending loopback-host requests, and `cleanup()`. Tests add ad-hoc routes to `app` after creation when they need one.
 - `AppError(status, code, message, retryable)` and `errorBody()` live in `server/src/errors.ts`.
 - Dev web port is **5171** (`shared/ports.ts`), not Vite's default 5173, which another local project on this machine already uses.
@@ -646,11 +646,13 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `shared/watch.ts` provides source-preserving passage grouping, active-passage lookup, Unicode search indexes/ranges, playback clamping, and transcript exports. The reader caches indexes and rendered rows; the 4,841-segment transcript renders 522 passages without virtualization. WP-07 replaces the grouping with evidence units. Passage elements retain `data-passage-index` and `data-start` for subsequent selection actions.
 - `ManualTranscript.tsx` posts to the existing manual transcript endpoint. Plain text has no seeking or follow playback; VTT/SRT retain their times. Failed saves retain the draft. `shared/limits.ts` shares the size limit without pulling Zod into the reader bundle.
 - `POST /api/videos/:id/transcript/retry` returns a queued or active transcript job (201), `404 NOT_FOUND` for a missing video, or `409 TRANSCRIPT_READY` for an existing transcript. The shared video context resumes job polling after the retry. Manual saves and completed jobs refresh the reader.
-- The selection toolbar is still absent per rule 7: WP-06 adds Save to note and WP-08 adds Ask AI with their actual operations. Other video tabs stay hidden until their WPs are complete.
+- WP-06 added the functional Save to note selection popover. Ask AI stays hidden until WP-08 connects its actual operation. Other video tabs stay hidden until their WPs are complete.
 
 ---
 
 ### WP-06: Documents and attachments
+
+**Status:** done on 2026-10-03; verification evidence is in the [work log](work-log.md#wp-06-documents-and-attachments-2026-10-03).
 
 **Goal:** per-video notes that autosave reliably, file attachments that preview or download safely, and "Save to note" from the transcript.
 
@@ -662,14 +664,15 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **API:**
   - `GET/POST /api/videos/:id/documents`
   - `GET/PATCH/DELETE /api/documents/:docId`. PATCH accepts `{ title?, kind?, markdown?, appendMarkdown? }`; `appendMarkdown` adds `\n\n` plus the text on the server, so appends never clobber.
+  - Replace and append are mutually exclusive. Attachment documents accept title changes only. Document create/update requests have a 25 MB body limit; accumulated Markdown is limited to 25 MB of UTF-8.
   - `GET /api/documents/:docId/export` returns a `.md` download with `Content-Disposition` and a safe filename.
 - **Uploads:**
   - `POST /api/videos/:id/assets` (multipart, field `file`, 25 MB `bodyLimit`).
   - Allowlist by extension **and** sniffed magic bytes: PDF (`%PDF`), PNG, JPEG, WebP → previewable. DOCX/XLSX/PPTX (ZIP magic) → download-only. `.md`/`.txt` (UTF-8 decodable) → **imported as a note document** instead of an asset.
   - Anything else is `415 UNSUPPORTED_FILE`.
   - Write to `files/tmp-<uuid>`, then `rename` to `files/<uuid>.<ext>`, then insert the asset and attachment document in one transaction. If the insert fails, delete the file.
-- **`GET /api/assets/:id/content`:** stream the file with its stored media type, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, and `Content-Disposition: inline` for PDF and images, `attachment` otherwise.
-- **Deleting** an attachment document deletes its asset row (cascade) and file.
+- **`GET /api/assets/:id/content`:** stream the file with its stored media type, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, and `Content-Disposition: inline` for PDF and images, `attachment` otherwise. `?download=1` downloads any attachment in its original format.
+- **Deleting** an attachment document deletes its asset row and file. Stage the file under a temporary name before deleting rows; restore it if the database transaction fails.
 - **Documents view** (per `10-documents.png`):
   - Left, 28%: "Video documents", New, Upload, a filter field, All/Notes/Files tabs, rows with kind labels, and "N documents".
   - Right: the editor.
@@ -685,7 +688,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - **"Save to note"** from Watch & Read opens a popover listing this video's notes plus "New note". It appends `> "<selected text>"\n> — [m:ss](/videos/:id/watch?t=<s>)`. For untimed transcripts the link is omitted.
 
 **Acceptance criteria.**
-- [ ] Tests cover:
+- [x] Tests cover:
   - CRUD;
   - `appendMarkdown` appends;
   - upload byte integrity (the SHA-256 of the downloaded content equals the upload);
@@ -694,13 +697,20 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - `.md` upload becomes a note;
   - content headers are right;
   - deleting a document removes its file.
-- [ ] Browser:
+- [x] Browser:
   - type a note, wait for "Saved", reload, and the text is still there;
   - stop the server, type, see "Save failed", restart, type one character, and it saves;
   - "Save to note" from the transcript appends a quote whose timestamp link seeks correctly;
   - a PDF and a PNG preview;
   - a DOCX downloads;
   - export produces the Markdown.
+
+**As built** (what later WPs need to know):
+- `services/documents.ts` returns `Document` with `{ id, videoId, title, kind, markdown, asset, createdAt, updatedAt }`. Editable kinds are `note`, `summary`, `study_guide`, and `qa`; attachments have null Markdown and `{ id, originalName, mediaType, sizeBytes }` asset metadata. Existing schema tables were sufficient; no migration or dependency was needed.
+- The per-video Documents route is `/videos/:videoId/documents/:documentId?`, lazy-loaded beside Watch & Read. `useDocumentSave.ts` debounces for 800 ms, serializes writes, immediately follows with edits made during a save, and retains drafts on failure. Router blocking and `beforeunload` protect unsaved changes. Export waits for the current draft to save.
+- `services/assets.ts` verifies extension and bytes, imports UTF-8 text as notes, and stores generated filenames under `config.dataDir/files`. Content streams use stored media types and safe ASCII/UTF-8 download names. Inserts roll back and remove files on failure; failed database deletion restores the original file.
+- `shared/documents.ts` contains Markdown formatting commands, kind labels, and the transcript-quote formatter. `features/watch/SaveToNote.tsx` captures only selected paragraph text (excluding timestamp buttons), uses the first selected passage's start, and creates or appends through the real document API. Untimed selections omit the source link. Keyboard focus enters the popover and returns to the transcript on Escape.
+- The Save to note target list includes this video's editable text documents; Files is download/preview-only. Ask AI, global All documents, and later video tabs remain hidden until their WPs are complete.
 
 ---
 

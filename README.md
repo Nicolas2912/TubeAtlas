@@ -10,10 +10,12 @@ TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives i
 - Browse your library; create, rename, and delete topics; assign videos to topics and filter by collection. Deleting a topic keeps its videos.
 - Watch beside the transcript; seek from timestamps, follow playback, search passages, and resume from your saved position.
 - Paste a missing transcript or upload WebVTT/SRT captions. Export the transcript as text or Markdown with timestamps.
+- Keep notes, summaries, study guides, and Q&A documents for a video, with autosave, Markdown preview, and export. Save selected transcript passages into a note with source links.
+- Upload PDF and image attachments to preview, or Office files to download. Markdown and text uploads become editable notes.
 - Read configured models, key presence, the data directory, and backup instructions in Settings.
 - Use the desktop interface, including keyboard navigation. The current release is desktop-only.
 
-Documents and attachments are the next work package. Notes, chat, and the knowledge graph will appear as they are completed.
+Evidence units and retrieval are the next work package. Chat and the knowledge graph will appear as they are completed.
 
 ## Requirements
 

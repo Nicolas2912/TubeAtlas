@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { activePassage, exportTranscript, findTextMatches, groupPassages, prepareSearch, type TextMatch } from '../../../../shared/watch.ts';
 import { formatTime } from '../../../../shared/time.ts';
 import type { Transcript, VideoSummary } from '../../api.ts';
+import { SaveToNote } from './SaveToNote.tsx';
 
 function highlighted(text: string, matches: TextMatch[], selected: TextMatch | undefined): ReactNode[] {
   const parts: ReactNode[] = [];
@@ -82,5 +83,6 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
       {rows}
       {searching && !results.length && <p className="muted">Try another word or clear the search to read the whole transcript.</p>}
     </div>
+    <SaveToNote scroller={scroller} passages={passages} videoId={video.id} />
   </section>;
 }

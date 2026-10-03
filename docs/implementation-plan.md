@@ -93,7 +93,7 @@ Essential server dependencies: hono, @hono/node-server, zod, @hono/zod-validator
 
 Global navigation: **Library**, **Topics**, **All documents**, **Settings**. Topics are user-created collections of videos, not automatic cross-video graph merging.
 
-Imports and library cards open `/videos/:videoId/watch`, with playback beside the transcript. The bare `/videos/:videoId` route redirects there, retaining timestamp parameters. `VideoLayout` keeps the saved identity and topic assignment above the reader. Video tabs and All documents enter the navigation only when their feature is implemented; Watch & Read is the first available tab.
+Imports and library cards open `/videos/:videoId/watch`, with playback beside the transcript. The bare `/videos/:videoId` route redirects there, retaining timestamp parameters. `VideoLayout` keeps the saved identity and topic assignment above each view. Watch & Read and Documents are available; other video tabs and All documents enter the navigation when their features are implemented.
 
 Video routes (added as their milestones land):
 

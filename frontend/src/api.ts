@@ -6,6 +6,7 @@ import type { Job } from '../../server/src/jobs.ts';
 export type { VideoSummary } from '../../server/src/services/videos.ts';
 export type { Topic } from '../../server/src/services/topics.ts';
 export type { Transcript } from '../../server/src/services/transcripts.ts';
+export type { Document, TextKind } from '../../server/src/services/documents.ts';
 export type { Job };
 
 export const api = hc<AppType>('/api');
