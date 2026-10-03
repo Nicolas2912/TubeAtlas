@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 import type { Segment } from '../../../shared/api.ts';
 import { tx, type Db } from '../db.ts';
 import { AppError } from '../errors.ts';
+import { buildUnits } from './units.ts';
+import type { EvidenceUnits } from '../../../shared/units.ts';
 
 export type TranscriptSource = 'youtube' | 'upload_timed' | 'paste_text';
 
-export type Transcript = {
+export type Transcript = EvidenceUnits & {
   transcriptId: number;
   revision: number;
   language: string | null;
@@ -20,6 +22,7 @@ export function saveTranscript(
   videoId: number,
   input: { source: TranscriptSource; language: string | null; timed: boolean; segments: Segment[] },
 ): number {
+  buildUnits(input.segments); // Reject invalid captions before replacing a usable revision.
   const segmentsJson = JSON.stringify(input.segments);
   const sha256 = createHash('sha256').update(segmentsJson).digest('hex');
   const plainText = input.segments.map((s) => s.text).join(' ');
@@ -48,13 +51,15 @@ export function getCurrentTranscript(db: Db, videoId: number): Transcript | null
     | { id: number; revision: number; language: string | null; source: TranscriptSource; timed: number; segments_json: string }
     | undefined;
   if (!row) return null;
+  const segments = JSON.parse(row.segments_json) as Segment[];
   return {
     transcriptId: row.id,
     revision: row.revision,
     language: row.language,
     source: row.source,
     timed: row.timed === 1,
-    segments: JSON.parse(row.segments_json) as Segment[],
+    segments,
+    ...buildUnits(segments),
   };
 }
 

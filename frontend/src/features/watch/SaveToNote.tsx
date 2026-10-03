@@ -3,11 +3,11 @@ import { Link } from 'react-router';
 import { api, errorMessage, unwrap, useApi, type Document } from '../../api.ts';
 import { LoadError } from '../../components/LoadError.tsx';
 import { transcriptQuote } from '../../../../shared/documents.ts';
-import type { Passage } from '../../../../shared/watch.ts';
+import type { Unit } from '../../../../shared/units.ts';
 
 type Quote = { text: string; start: number | null; left: number; top: number };
 
-export function SaveToNote({ scroller, passages, videoId }: { scroller: RefObject<HTMLDivElement | null>; passages: Passage[]; videoId: number }) {
+export function SaveToNote({ scroller, units, videoId }: { scroller: RefObject<HTMLDivElement | null>; units: Unit[]; videoId: number }) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [open, setOpen] = useState(false);
   const frozen = useRef(false);
@@ -34,7 +34,16 @@ export function SaveToNote({ scroller, passages, videoId }: { scroller: RefObjec
         if (paragraph.contains(range.endContainer)) part.setEnd(range.endContainer, range.endOffset);
         const text = part.toString().trim();
         if (!text) continue;
-        if (!pieces.length) start = passages[Number(paragraph.parentElement!.dataset.passageIndex)]!.start;
+        if (!pieces.length) {
+          for (const unit of paragraph.querySelectorAll<HTMLElement>('[data-unit-index]')) {
+            if (!range.intersectsNode(unit)) continue;
+            const selectedUnit = window.document.createRange();
+            selectedUnit.selectNodeContents(unit);
+            if (unit.contains(range.startContainer)) selectedUnit.setStart(range.startContainer, range.startOffset);
+            if (unit.contains(range.endContainer)) selectedUnit.setEnd(range.endContainer, range.endOffset);
+            if (selectedUnit.toString().trim()) { start = units[Number(unit.dataset.unitIndex)]!.start; break; }
+          }
+        }
         pieces.push(text);
       }
       if (!pieces.length) { setQuote(null); return; }
@@ -44,7 +53,7 @@ export function SaveToNote({ scroller, passages, videoId }: { scroller: RefObjec
     }
     window.document.addEventListener('selectionchange', selection);
     return () => window.document.removeEventListener('selectionchange', selection);
-  }, [scroller, passages]);
+  }, [scroller, units]);
 
   function close(restoreFocus = true) { frozen.current = false; setOpen(false); setQuote(null); if (restoreFocus) scroller.current?.focus({ preventScroll: true }); }
   useEffect(() => { if (open) panel.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [open]);

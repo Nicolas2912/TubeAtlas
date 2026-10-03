@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { activePassage, exportTranscript, findTextMatches, groupPassages, prepareSearch, type TextMatch } from '../../../../shared/watch.ts';
+import { activeUnit, exportTranscript, findTextMatches, groupPassages, prepareSearch, type TextMatch } from '../../../../shared/watch.ts';
 import { formatTime } from '../../../../shared/time.ts';
 import type { Transcript, VideoSummary } from '../../api.ts';
 import { SaveToNote } from './SaveToNote.tsx';
@@ -16,30 +16,33 @@ function highlighted(text: string, matches: TextMatch[], selected: TextMatch | u
 }
 
 export function TranscriptPanel({ transcript, video, time, ready, seek }: { transcript: Transcript; video: VideoSummary; time: number; ready: boolean; seek: (seconds: number) => void }) {
-  const passages = useMemo(() => groupPassages(transcript.segments, transcript.timed), [transcript]);
-  const indexes = useMemo(() => passages.map((p) => prepareSearch(p.text)), [passages]);
+  const units = transcript.units;
+  const passages = useMemo(() => groupPassages(units), [units]);
+  const unitIndexes = useMemo(() => new Map(units.map((unit, index) => [unit.id, index])), [units]);
+  const indexes = useMemo(() => units.map((unit) => prepareSearch(unit.text)), [units]);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [follow, setFollow] = useState(true);
   const scroller = useRef<HTMLDivElement>(null);
   const manualScroll = useRef(0);
   const matches = useMemo(() => indexes.map((index) => findTextMatches(index, query)), [indexes, query]);
-  const results = useMemo(() => matches.flatMap((list, passageIndex) => list.map((match) => ({ passageIndex, match }))), [matches]);
+  const results = useMemo(() => matches.flatMap((list, unitIndex) => list.map((match) => ({ unitIndex, match }))), [matches]);
   const selected = results[selectedIndex];
-  const active = transcript.timed ? activePassage(passages, time) : -1;
+  const active = transcript.timed ? activeUnit(units, time) : -1;
   const searching = query.trim().length > 0;
 
   function center(index: number) {
     const list = scroller.current;
-    const element = list?.querySelector<HTMLElement>(`[data-passage-index="${index}"]`);
+    const element = list?.querySelector<HTMLElement>(`[data-unit-index="${index}"]`);
     if (!list || !element) return;
-    list.scrollTop += element.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - element.offsetHeight) / 2;
+    const rect = element.getBoundingClientRect();
+    list.scrollTop += rect.top - list.getBoundingClientRect().top - (list.clientHeight - rect.height) / 2;
   }
 
   useEffect(() => {
     if (follow && !searching && active >= 0 && Date.now() - manualScroll.current >= 5000) center(active);
   }, [active, follow, searching]);
-  useEffect(() => { if (selected) center(selected.passageIndex); }, [selected]);
+  useEffect(() => { if (selected) center(selected.unitIndex); }, [selected]);
 
   function moveMatch(delta: number) { setSelectedIndex((index) => (index + delta + results.length) % results.length); }
 
@@ -54,12 +57,20 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
   }
 
   const rows = useMemo(() => passages.map((passage, index) => {
-    if (searching && !matches[index]!.length) return null;
-    return <div key={passage.id} data-passage-index={index} data-start={passage.start ?? undefined} className={`passage${index === active ? ' active-passage' : ''}`} aria-current={index === active ? 'true' : undefined}>
-      {passage.start !== null && <button className="timestamp" disabled={!ready} aria-label={`Seek to ${formatTime(passage.start)}`} onClick={() => seek(passage.start!)}>{formatTime(passage.start)}</button>}
-      <p>{highlighted(passage.text, matches[index]!, selected?.passageIndex === index ? selected.match : undefined)}</p>
+    const visible = passage.units.filter((unit) => !searching || matches[unitIndexes.get(unit.id)!]!.length);
+    if (!visible.length) return null;
+    const start = visible[0]!.start;
+    return <div key={passage.id} data-passage-index={index} className="passage">
+      {start !== null && <button className="timestamp" disabled={!ready} aria-label={`Seek to ${formatTime(start)}`} onClick={() => { manualScroll.current = 0; seek(start); }}>{formatTime(start)}</button>}
+      <p>{visible.map((unit, position) => {
+        const unitIndex = unitIndexes.get(unit.id)!;
+        return <span key={unit.id}>{position > 0 && ' '}<span data-unit-id={unit.id} data-unit-index={unitIndex} data-start={unit.start ?? undefined}
+          className={`evidence-unit${unitIndex === active ? ' active-unit' : ''}`} aria-current={unitIndex === active ? 'true' : undefined}>
+          {highlighted(unit.text, matches[unitIndex]!, selected?.unitIndex === unitIndex ? selected.match : undefined)}
+        </span></span>;
+      })}</p>
     </div>;
-  }), [passages, searching, matches, selected, active, ready, seek]);
+  }), [passages, unitIndexes, searching, matches, selected, active, ready, seek]);
 
   return <section className="transcript-panel panel" aria-labelledby="transcript-title">
     <div className="transcript-heading">
@@ -83,6 +94,6 @@ export function TranscriptPanel({ transcript, video, time, ready, seek }: { tran
       {rows}
       {searching && !results.length && <p className="muted">Try another word or clear the search to read the whole transcript.</p>}
     </div>
-    <SaveToNote scroller={scroller} passages={passages} videoId={video.id} />
+    <SaveToNote scroller={scroller} units={units} videoId={video.id} />
   </section>;
 }

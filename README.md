@@ -15,7 +15,7 @@ TubeAtlas is being rebuilt as a Node.js/TypeScript application. The plan lives i
 - Read configured models, key presence, the data directory, and backup instructions in Settings.
 - Use the desktop interface, including keyboard navigation. The current release is desktop-only.
 
-Evidence units and retrieval are the next work package. Chat and the knowledge graph will appear as they are completed.
+The reader now uses stable evidence units for search, playback highlighting, and quote sources. Scoped retrieval is ready for Chat, the next work package. Chat and the knowledge graph will appear as they are completed.
 
 ## Requirements
 

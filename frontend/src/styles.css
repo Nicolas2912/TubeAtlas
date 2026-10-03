@@ -161,9 +161,9 @@ input[type='checkbox'] { accent-color: var(--accent-ink); }
 .transcript-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 12px; padding-right: 4px; }
 .passage { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 12px 10px; border-radius: var(--radius); line-height: 1.65; }
 .passage p { margin: 0; overflow-wrap: anywhere; }
-.passage.active-passage { background: var(--accent-soft); }
+.evidence-unit.active-unit { background: var(--accent-soft); border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .timestamp { align-self: start; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; font-variant-numeric: tabular-nums; }
-.timestamp:hover, .active-passage .timestamp { color: var(--accent-ink); }
+.timestamp:hover { color: var(--accent-ink); }
 .timestamp:disabled { cursor: default; }
 .passage mark { color: var(--ink); background: #f7e4a1; }
 .passage mark.selected-match { background: #edbd62; outline: 1px solid #8c6522; }

@@ -4,7 +4,7 @@ Status: execution plan, written September 26, 2026; progress reviewed October 3,
 
 - The plan and spec define **what** must be true. This document defines **how and in which order** to get there.
 - If this document contradicts the plan or the spec, the plan/spec wins; fix this document in the same commit and note it in the work log. The refinements in §2 are the only intended differences, and the plan and spec have been updated to match them.
-- WP-00 through WP-06 are complete. WP-07 through WP-14 have not started. Next: WP-07 (Evidence units and retrieval). See the overview in §5 and the work log for verification evidence.
+- WP-00 through WP-07 are complete. WP-08 through WP-14 have not started. Next: WP-08 (Chat). See the overview in §5 and the work log for verification evidence.
 - The current release is desktop-only. Mobile navigation, mobile layouts, and phone-width testing are out of scope unless the user requests them.
 
 ## 1. Rules for the implementing agent
@@ -148,7 +148,7 @@ Overview (→ = depends on):
 | 04 | Frontend shell, Library, Topics, Settings | 03 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-04-frontend-shell-library-topics-settings-2026-10-03)) |
 | 05 | Watch & Read | 04 | 1 | **Done** 2026-10-03 ([log](work-log.md#wp-05-watch--read-2026-10-03)) |
 | 06 | Documents and attachments | 05 | 2 | **Done** 2026-10-03 ([log](work-log.md#wp-06-documents-and-attachments-2026-10-03)) |
-| 07 | Evidence units and retrieval | 02, 03 | 3 | Not started |
+| 07 | Evidence units and retrieval | 02, 03, 05 | 3 | **Done** 2026-10-03 ([log](work-log.md#wp-07-evidence-units-and-retrieval-2026-10-03)) |
 | 08 | Chat | 06, 07 | 3 | Not started |
 | 09 | KG evaluation references (no model runs) | 07 | 4 | Not started |
 | 10 | KG pipeline | 02, 07, 09 | 4 | Not started |
@@ -643,7 +643,7 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 
 **As built** (what later WPs need to know):
 - `features/watch/WatchPage.tsx` reads `useVideoContext()`. `usePlayer.ts` owns the real YouTube player, polling, seeking, and serialized playback saves (also on seek and leaving the page). A valid `?t=` takes precedence over the saved position on load. Failed player loading or saves have retry controls; the transcript remains readable when YouTube is unavailable.
-- `shared/watch.ts` provides source-preserving passage grouping, active-passage lookup, Unicode search indexes/ranges, playback clamping, and transcript exports. The reader caches indexes and rendered rows; the 4,841-segment transcript renders 522 passages without virtualization. WP-07 replaces the grouping with evidence units. Passage elements retain `data-passage-index` and `data-start` for subsequent selection actions.
+- `shared/watch.ts` provides paragraph grouping, Unicode search indexes/ranges, playback clamping, and transcript exports. WP-07 replaced raw-caption grouping and paragraph highlighting with evidence units: the 4,841-segment transcript now renders 1,472 units in 795 paragraphs without virtualization. Paragraphs retain `data-passage-index`; source times and selection identity are on unit spans (`data-unit-index`, `data-unit-id`, `data-start`).
 - `ManualTranscript.tsx` posts to the existing manual transcript endpoint. Plain text has no seeking or follow playback; VTT/SRT retain their times. Failed saves retain the draft. `shared/limits.ts` shares the size limit without pulling Zod into the reader bundle.
 - `POST /api/videos/:id/transcript/retry` returns a queued or active transcript job (201), `404 NOT_FOUND` for a missing video, or `409 TRANSCRIPT_READY` for an existing transcript. The shared video context resumes job polling after the retry. Manual saves and completed jobs refresh the reader.
 - WP-06 added the functional Save to note selection popover. Ask AI stays hidden until WP-08 connects its actual operation. Other video tabs stay hidden until their WPs are complete.
@@ -709,12 +709,14 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - `services/documents.ts` returns `Document` with `{ id, videoId, title, kind, markdown, asset, createdAt, updatedAt }`. Editable kinds are `note`, `summary`, `study_guide`, and `qa`; attachments have null Markdown and `{ id, originalName, mediaType, sizeBytes }` asset metadata. Existing schema tables were sufficient; no migration or dependency was needed.
 - The per-video Documents route is `/videos/:videoId/documents/:documentId?`, lazy-loaded beside Watch & Read. `useDocumentSave.ts` debounces for 800 ms, serializes writes, immediately follows with edits made during a save, and retains drafts on failure. Router blocking and `beforeunload` protect unsaved changes. Export waits for the current draft to save.
 - `services/assets.ts` verifies extension and bytes, imports UTF-8 text as notes, and stores generated filenames under `config.dataDir/files`. Content streams use stored media types and safe ASCII/UTF-8 download names. Inserts roll back and remove files on failure; failed database deletion restores the original file.
-- `shared/documents.ts` contains Markdown formatting commands, kind labels, and the transcript-quote formatter. `features/watch/SaveToNote.tsx` captures only selected paragraph text (excluding timestamp buttons), uses the first selected passage's start, and creates or appends through the real document API. Untimed selections omit the source link. Keyboard focus enters the popover and returns to the transcript on Escape.
+- `shared/documents.ts` contains Markdown formatting commands, kind labels, and the transcript-quote formatter. `features/watch/SaveToNote.tsx` captures only selected paragraph text (excluding timestamp buttons), uses the first selected evidence unit's start since WP-07, and creates or appends through the real document API. Untimed selections omit the source link. Keyboard focus enters the popover and returns to the transcript on Escape.
 - The Save to note target list includes this video's editable text documents; Files is download/preview-only. Ask AI, global All documents, and later video tabs remain hidden until their WPs are complete.
 
 ---
 
 ### WP-07: Evidence units and retrieval
+
+**Status:** done on 2026-10-03; evidence in the [work log](work-log.md#wp-07-evidence-units-and-retrieval-2026-10-03).
 
 **Goal:** one deterministic transcript preprocessor, used by the transcript view, chat citations, and the KG, plus scoped embedding retrieval for long transcripts.
 
@@ -723,24 +725,24 @@ CREATE INDEX jobs_queue ON jobs(status, id);
 - Out: prompts.
 
 **Implementation details.**
-- **`buildUnits(segments): { unitsVersion: 1, units: Unit[] }`**, where `Unit = { id: 'u001', segmentIds: number[], start: number|null, end: number|null, text: string, turnStart: boolean, annotations: string[] }`. It is pure and deterministic. Follow the KG spec §3:
+- **`buildUnits(segments): { unitsVersion: 1, units: Unit[], deduplications }`**, where `Unit = { id: 'u001', segmentIds: number[], start: number|null, end: number|null, text: string, turnStart: boolean, annotations: string[] }`. `deduplications` records `{ segmentId, previousSegmentId, text }` for each removed prefix. It is pure and deterministic. Raw segments remain immutable and are returned alongside units. Follow the KG spec §3:
   1. validate times (overlaps are normal);
-  2. NFC-normalize and collapse whitespace;
+  2. NFC-normalize and collapse whitespace; preserve display punctuation, unifying quotes/dashes only for matching;
   3. move `[…]` tags into annotations;
-  4. drop exact rolling-caption duplicate prefixes (record the mapping);
+  4. drop exact normalized multiword rolling-caption prefixes in overlapping timed captions, without crossing speaker markers or tags (record the mapping); single-word repetition and untimed paragraphs are kept;
   5. split at every `>>` (a segment can then belong to two units);
   6. close a unit at sentence punctuation (`. ? ! …`) once it has ≥ 15 words, or at a segment boundary once it has ≥ 45 words;
   7. start = first segment start, end = max segment end;
-  8. IDs are zero-padded to at least 3 digits (`u001`, and `u1234` for longer transcripts).
+  8. IDs are zero-padded to at least 3 digits (`u001`, and `u1234` for longer transcripts). Empty turns do not produce empty units, and untimed source paragraphs keep their boundaries.
 - `estimateTokens(text) = Math.ceil(text.length / 3.5)`, a conservative estimate; there's no tokenizer.
-- The transcript API also returns `unitsVersion` and `units`. The Watch & Read view switches to paragraphs made of consecutive units: a new paragraph at `turnStart`, or after about 60 words. Highlight and search operate on units.
+- The transcript API also returns `unitsVersion`, `units`, and `deduplications`. The Watch & Read view uses paragraphs made of consecutive units: a new paragraph at `turnStart`, after about 60 words, or at an untimed source paragraph boundary. Highlight and search operate on units; note selections use the first selected unit's time.
 - **Retrieval:**
-  - `ensureChunks(transcriptId)`: if no chunks exist for the current `(embedding_model, units_version)`, delete old chunks and build new ones. A chunk is consecutive units up to about 350 estimated tokens. Embed the chunks in batches of 64 and store them as `Buffer.from(float32.buffer)`.
+  - `ensureChunks(transcriptId)`: reuse complete chunks for the current `(embedding_model, units_version)`; otherwise build replacements and atomically replace the old cache after every batch succeeds. A chunk is consecutive whole units up to about 350 estimated tokens (a single oversized unit stays whole). Embed the chunks in batches of 64 and store them as `Buffer.from(float32.buffer)`.
   - `retrieve(transcriptId, query, { topK: 6, budgetTokens: 12000 })`: embed the query, score cosine similarity as a dot product (vectors are normalized) over only this transcript's chunks, and add each hit's immediate neighbours. Order by time and cut at the budget. Return units.
   - Log the embedding cost.
 
 **Acceptance criteria.**
-- [ ] Unit tests (invented text) cover:
+- [x] Unit tests (invented text) cover:
   - overlapping times are preserved;
   - a `>>` in the middle of a segment splits units and sets `turnStart`;
   - tags move to annotations;
@@ -748,8 +750,15 @@ CREATE INDEX jobs_queue ON jobs(status, id);
   - sentence and length breaking;
   - untimed input gives null times;
   - identical input gives identical output.
-- [ ] On the three snapshots (read-only use: count units, no content in tests or code), record unit counts, max unit length, and the number of `turnStart` units in the work log. The two short videos should have no `turnStart` units, and the long one should have about 500.
-- [ ] Retrieval test with a fake embedder: it only returns units of the requested transcript, respects the budget, and rebuilds chunks when the embedding model name changes.
+- [x] On the three snapshots (read-only use: count units, no content in tests or code), record unit counts, max unit length, and the number of `turnStart` units in the work log. The two short videos have no `turnStart` units; the long one has 509 (512 markers with three empty turns).
+- [x] Retrieval test with a fake embedder: it only returns units of the requested transcript, respects the budget, and rebuilds chunks when the embedding model name changes.
+
+**As built** (what later WPs need to know):
+- `shared/units.ts` owns `Unit`, `EvidenceUnits`, `UNITS_VERSION = 1`, `estimateTokens`, and typography normalization for matching. `services/units.ts` is the only builder; the transcript GET/manual-save responses include its output alongside original segments. Saves validate before replacing a usable revision.
+- `createRetrieval({ db, provider, model, log? })` returns `ensureChunks(transcriptId)` and `retrieve(transcriptId, query, { topK?, budgetTokens? })`. Pass the exact immutable transcript revision ID. The provider is the existing OpenRouter adapter; configured model names key the cache even when OpenRouter returns an alias. There is no public retrieval endpoint or embedding on page load: WP-08 calls the service only when long-transcript chat needs it.
+- Chunks contain whole units, up to 350 estimated text tokens, and embed in batches of at most 64. Concurrent builds share one promise; failed rebuilds preserve the old cache. Vectors are validated, normalized, and stored as float32 bytes in the existing chunks table. No migration was needed.
+- Retrieval defaults to six hits plus immediate neighbours and a 12,000-token budget. Results are deduplicated and ordered by source time, preserving input order for untimed or tied units. The budget is the sum of `estimateTokens(unit.text)` and cuts at a whole-unit boundary; callers account for citation headers and other prompt material separately. Query/dimension failures propagate without hidden retries. Logs include reported cost (null when unknown), usage, requested/returned models, purpose, and transcript ID, without transcript/query text.
+- The reader filters and highlights unit spans while retaining paragraph typography and full exports. Following centers the actual multiline unit bounds; explicit timestamp clicks resume centering. A caption split between speakers keeps the same source time for both units, so the last covering unit wins during playback rather than inventing intra-caption timings.
 
 ---
 

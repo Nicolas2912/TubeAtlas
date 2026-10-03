@@ -25,6 +25,9 @@ test('the frontend client reaches the API sub-app, including topics, filtering, 
   const transcript = await unwrap(api.videos[':id'].transcript.$get({ param: { id: String(video.id) } }));
   assert.equal(transcript.timed, true);
   assert.equal(transcript.segments[0]!.start, 0);
+  assert.equal(transcript.unitsVersion, 1);
+  assert.equal(transcript.units[0]!.id, 'u001');
+  assert.deepEqual(transcript.units[0]!.segmentIds, [0]);
   await unwrap(api.videos[':id'].$patch({ param: { id: String(video.id) }, json: { playbackSeconds: 42.5 } }));
   assert.equal((await unwrap(api.videos[':id'].$get({ param: { id: String(video.id) } }))).playbackSeconds, 42.5);
   const note = await unwrap(api.videos[':id'].documents.$post({ param: { id: String(video.id) }, json: { title: 'Paper notes' } }));

@@ -58,7 +58,10 @@ test('import creates the video and a transcript job; the job stores timed segmen
   assert.deepEqual(done.result, { status: 'ready', segments: 3, language: 'en' });
 
   const transcript = await (await request(`/api/videos/${video.id}/transcript`)).json();
-  assert.deepEqual(transcript, { transcriptId: transcript.transcriptId, revision: 1, language: 'en', source: 'youtube', timed: true, segments: SEGMENTS });
+  assert.deepEqual(transcript, { transcriptId: transcript.transcriptId, revision: 1, language: 'en', source: 'youtube', timed: true, segments: SEGMENTS,
+    unitsVersion: 1, deduplications: [], units: [{ id: 'u001', segmentIds: [0, 1, 2], start: 0.32, end: 9.2,
+      text: SEGMENTS.map((s) => s.text).join(' '), turnStart: false, annotations: [] }] });
+  assert.deepEqual(await (await request(`/api/videos/${video.id}/transcript`)).json(), transcript);
   const after = await (await request(`/api/videos/${video.id}`)).json();
   assert.equal(after.transcriptStatus, 'ready');
   assert.equal(after.activeJob, null);
@@ -238,6 +241,11 @@ test('manual transcripts (text, VTT, SRT) create new revisions; only the newest 
   const rows = db.prepare('SELECT revision, is_current FROM transcripts WHERE video_id = ? ORDER BY revision').all(video.id);
   assert.deepEqual(rows.map((r: any) => [r.revision, r.is_current]), [[1, 0], [2, 0], [3, 1]]);
   assert.deepEqual((await (await request(`/api/videos/${video.id}/transcript`)).json()).segments, t3.segments);
+
+  const invalid = await json('POST', `/api/videos/${video.id}/transcript`, { format: 'vtt', content: 'WEBVTT\n\n00:05.000 --> 00:02.000\nInvalid timing.' });
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).error.code, 'INVALID_TRANSCRIPT');
+  assert.equal((await (await request(`/api/videos/${video.id}/transcript`)).json()).transcriptId, t3.transcriptId);
 
   const empty = await json('POST', `/api/videos/${video.id}/transcript`, { format: 'vtt', content: 'WEBVTT\n\nno cues here' });
   assert.equal(empty.status, 400);
